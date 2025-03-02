@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'api_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -109,6 +110,12 @@ class _MyHomePageState extends State<MyHomePage> {
               '$_counter',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
+           ElevatedButton(
+              onPressed: () async {
+                await syncFDAData();
+              },
+              child: const Text('Sync FDA Data'),
+          ),
           ],
         ),
       ),
