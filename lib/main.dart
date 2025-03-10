@@ -1,6 +1,7 @@
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'api_service.dart';
 
 void main() {
   runApp(MyApp());
@@ -14,7 +15,7 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => MyAppState(),
       child: MaterialApp(
-        title: 'Namer App',
+        title: 'medmanage',
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
@@ -55,19 +56,31 @@ class MyHomePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Checkable List'),
       ),
-      body: ListView.builder(
-        itemCount: appState.items.length,
-        itemBuilder: (context, index) {
-          final item = appState.items[index];
-          return CheckboxListTile(
-            title: Text(item.wordPair.asLowerCase),
-            value: item.isChecked,
-            onChanged: (bool? value) {
-              // Toggle the checked state when user interacts with the checkbox
-              appState.toggleChecked(item);
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: appState.items.length,
+              itemBuilder: (context, index) {
+                final item = appState.items[index];
+                return CheckboxListTile(
+                  title: Text(item.wordPair.asLowerCase),
+                  value: item.isChecked,
+                  onChanged: (bool? value) {
+                    // Toggle the checked state when user interacts with the checkbox
+                    appState.toggleChecked(item);
+                  },
+                );
+              },
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await syncFDAData();
             },
-          );
-        },
+            child: const Text('Sync FDA Data'),
+          ),
+        ],
       ),
     );
   }
