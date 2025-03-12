@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "165113025769",
+    "project_id": "medmanage-451913",
+    "storage_bucket": "medmanage-451913.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:165113025769:android:b10f41cd7af30ef559cc78",
+        "android_client_info": {
+          "package_name": "com.example.medmanage"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAd2Mbo0QgJrwudKPHAGwbJRQPEI8jPZkA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
