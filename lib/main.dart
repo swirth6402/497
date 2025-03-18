@@ -5,6 +5,7 @@ import 'api_service.dart';
 import 'medication.dart';
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,28 +24,97 @@ class MyApp extends StatelessWidget {
       create: (context) => MyAppState(),
       child: MaterialApp(
         title: 'medmanage',
-        theme: ThemeData(
+        theme: ThemeData(  // THIS IS WHERE THE THEME IS CREATED
+          fontFamily: GoogleFonts.inter().fontFamily,
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color.fromARGB(255, 118, 196, 255)
+            
+            ),
+          textTheme: TextTheme(
+            displayLarge: const TextStyle(
+              fontSize: 40,
+              fontWeight: FontWeight.bold,
+            ),
+            titleLarge: GoogleFonts.inter(
+
+            )
+          )
         ),
-        home: const MyHomePage(),
+        home: const HomePage(), 
       ),
     );
   }
 }
 
+
+// *************************** HOME PAGE *********************************************
+class HomePage extends StatefulWidget {
+  const HomePage ({super.key});
+
+  @override
+  MyHomePage createState() => MyHomePage();
+}
+
+class MyHomePage extends State<HomePage> {
+  final TextEditingController newItemController = TextEditingController();
+  final TextEditingController searchController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    var appState = context.watch<MyAppState>();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Home'),
+      ),
+      body: Column(
+        children: [
+         
+          // Existing checklist
+          Expanded(
+            child: ListView.builder(
+              itemCount: appState.items.length,
+              itemBuilder: (context, index) {
+                final item = appState.items[index];
+                return CheckboxListTile(
+                   title: Text(
+                   item.medication.genericName, 
+                    style: const TextStyle(fontWeight: FontWeight.bold)
+                    ),
+                  value: item.isChecked,
+                  onChanged: (bool? value) {
+                    appState.toggleChecked(item);
+                  },
+                );
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+              
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => MedicationLookup()),
+              );
+            },
+            child: const Text('Medication Lookup'),
+          ),
+        ],
+      ),
+    );
+  }
+}
 class MyAppState extends ChangeNotifier {
   // List of medications and their checked state
-  List<Item> items = List.generate(3, (index) {
-  final dummyMed = Medication(
-    id: 'dummy-$index',
-    genericName: 'defaultGeneric-$index', // Provide a default or generated generic name
-    activeIngredient: WordPair.random().asLowerCase,
-    dosageAndAdministration: '',
-  );
-  return Item(dummyMed, false);
-});
-
+  List<Item> items = [];
 
   // Method to toggle the checked state
   void toggleChecked(Item item) {
@@ -59,6 +129,7 @@ class MyAppState extends ChangeNotifier {
   }
 }
 
+
 // A class to represent each item in the list (word pair + checked state)
 class Item {
   final Medication medication;
@@ -67,14 +138,16 @@ class Item {
   Item(this.medication, this.isChecked);
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key}); // This forwards the key to the StatefulWidget's constructor
+// ***************************** MEDICATION LOOKUP *********************************************
+
+class MedicationLookup extends StatefulWidget {
+  const MedicationLookup({super.key}); // This forwards the key to the StatefulWidget's constructor
 
   @override
-  MyHomePageState createState() => MyHomePageState();
+  MyMedicationLookupState createState() => MyMedicationLookupState();
 }
 
-class MyHomePageState extends State<MyHomePage> {
+class MyMedicationLookupState extends State<MedicationLookup> {
   final TextEditingController newItemController = TextEditingController();
   final TextEditingController searchController = TextEditingController();
   List<Medication> _searchResults = []; // Use a private variable
@@ -94,7 +167,7 @@ class MyHomePageState extends State<MyHomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Medication List'),
+        title: const Text('Medication Lookup'),
       ),
       body: Column(
         children: [
@@ -148,8 +221,8 @@ class MyHomePageState extends State<MyHomePage> {
                           itemBuilder: (context, index) {
                             final med = _searchResults[index];
                             return ListTile(
-                              title: Text(med.activeIngredient),
-                              subtitle: Text(med.dosageAndAdministration),
+                              title: Text(med.genericName),
+                              subtitle: Text(med.description),
                               trailing: ElevatedButton(
                                 child: const Text('Add'),
                                 onPressed: () {
@@ -170,7 +243,10 @@ class MyHomePageState extends State<MyHomePage> {
               itemBuilder: (context, index) {
                 final item = appState.items[index];
                 return CheckboxListTile(
-                  title: Text(item.medication.genericName),
+                   title: Text(
+                   item.medication.genericName, 
+                    style: const TextStyle(fontWeight: FontWeight.bold)
+                    ),
                   value: item.isChecked,
                   onChanged: (bool? value) {
                     appState.toggleChecked(item);
@@ -183,37 +259,89 @@ class MyHomePageState extends State<MyHomePage> {
             padding: const EdgeInsets.all(8.0),
             child: Column(
               children: [
-                // Dropdown menu to select a new word pair
-                // DropdownButton<WordPair>(
-                //   hint: const Text('Select a WordPair'),
-                //   value: selectedWordPair,
-                //   items: List.generate(10, (index) {
-                //     return WordPair.random();
-                //   }).map((WordPair wordPair) {
-                //     return DropdownMenuItem<WordPair>(
-                //       value: wordPair,
-                //       child: Text(wordPair.asLowerCase),
-                //     );
-                //   }).toList(),
-                //   onChanged: (WordPair? newWordPair) {
-                //     setState(() {
-                //       selectedWordPair = newWordPair;
-                //     });
-                //   },
-                // ),
-                // Button to add the selected word pair to the list
-                // ElevatedButton(
-                //   onPressed: () {
-                //     if (selectedWordPair != null) {
-                //       final newItem = Item(selectedWordPair!, false);
-                //       appState.addItem(newItem);
-                //       setState(() {
-                //         selectedWordPair = null;
-                //       });
-                //     }
-                //   },
-                //   child: const Text('Add New Medication'),
-                // ),
+              
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await syncFDAData();
+            },
+            child: const Text('Sync FDA Data'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => InteractionChecker()),
+              );
+            },
+            child: const Text('Interaction Checker'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+// ***************************** INTERACTION CHECKER *********************************
+class InteractionChecker extends StatefulWidget {
+  const InteractionChecker({super.key});
+
+  @override
+  MyInteractionCheckerState createState() => MyInteractionCheckerState();
+}
+
+class MyInteractionCheckerState extends State<InteractionChecker> {
+  final TextEditingController newItemController = TextEditingController();
+  final TextEditingController searchController = TextEditingController();
+  List<Medication> _searchResults = []; // Use a private variable
+
+  Future<List<Medication>> _searchMedications(String query) async {
+    try {
+      return await searchMedications(query);  //Call the searchMedications function from your api_service.dart file
+    } catch (e) {
+      print('Search error: $e');
+      rethrow; // Re-throw the exception to be handled higher up
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var appState = context.watch<MyAppState>();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Interaction Checker'),
+      ),
+      body: Column(
+        children: [
+         
+          // Existing checklist
+          Expanded(
+            child: ListView.builder(
+              itemCount: appState.items.length,
+              itemBuilder: (context, index) {
+                final item = appState.items[index];
+                return CheckboxListTile(
+                   title: Text(
+                   item.medication.genericName, 
+                    style: const TextStyle(fontWeight: FontWeight.bold)
+                    ),
+                  value: item.isChecked,
+                  onChanged: (bool? value) {
+                    appState.toggleChecked(item);
+                  },
+                );
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+              
               ],
             ),
           ),

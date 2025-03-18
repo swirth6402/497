@@ -20,7 +20,6 @@ class FirebaseService {
             data['openfda'] != null && 
             data['openfda']['generic_name'] != null) {
           
-          // The generic_name appears to be an array based on your screenshot
           List<dynamic> genericNames = data['openfda']['generic_name'];
           
           // Check if any generic name contains the search query
