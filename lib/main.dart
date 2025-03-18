@@ -162,8 +162,10 @@ class MyMedicationLookupState extends State<MedicationLookup> {
   }
 
   @override
+  
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
+    final selectedItems = appState.items.where((item) => item.isChecked).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -269,15 +271,16 @@ class MyMedicationLookupState extends State<MedicationLookup> {
             },
             child: const Text('Sync FDA Data'),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => InteractionChecker()),
-              );
-            },
-            child: const Text('Interaction Checker'),
-          ),
+          if (selectedItems.length == 2)
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => InteractionChecker(selectedItems: selectedItems)),
+                );
+              },
+              child: const Text('Interaction Checker'),
+            ),
         ],
       ),
     );
@@ -287,7 +290,8 @@ class MyMedicationLookupState extends State<MedicationLookup> {
 
 // ***************************** INTERACTION CHECKER *********************************
 class InteractionChecker extends StatefulWidget {
-  const InteractionChecker({super.key});
+  final List<Item> selectedItems;
+  const InteractionChecker({super.key, required this.selectedItems});
 
   @override
   MyInteractionCheckerState createState() => MyInteractionCheckerState();
@@ -310,33 +314,38 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Interaction Checker'),
       ),
       body: Column(
+        
         children: [
-         
-          // Existing checklist
-          Expanded(
-            child: ListView.builder(
-              itemCount: appState.items.length,
-              itemBuilder: (context, index) {
-                final item = appState.items[index];
-                return CheckboxListTile(
-                   title: Text(
-                   item.medication.genericName, 
-                    style: const TextStyle(fontWeight: FontWeight.bold)
-                    ),
-                  value: item.isChecked,
-                  onChanged: (bool? value) {
-                    appState.toggleChecked(item);
-                  },
-                );
-              },
+          Text(
+              'Selected Medications for Interaction',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
+
+          // checked items
+          Expanded(
+            child: widget.selectedItems.isEmpty
+                ? const Center(
+                    child: Text('No medications selected.'),
+                  )
+                : ListView.builder(
+                    itemCount: widget.selectedItems.length,
+                    itemBuilder: (context, index) {
+                      final item = widget.selectedItems[index];
+                      return ListTile(
+                        title: Text(
+                          item.medication.genericName,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      );
+                    },
+                  ),
           ),
+
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Column(
@@ -345,6 +354,7 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
               ],
             ),
           ),
+          
           ElevatedButton(
             onPressed: () async {
               await syncFDAData();
