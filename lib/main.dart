@@ -441,7 +441,7 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
               TextFormField(
                 controller: _weightController,
                 decoration: InputDecoration(
-                  labelText: 'Child\'s Weight (kg)',
+                  labelText: 'Child\'s Weight (lb)',
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.number,
