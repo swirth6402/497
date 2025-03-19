@@ -408,13 +408,13 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
 
     if (weight != null && adultDosage != null && weight > 0 && adultDosage > 0) {
       // Clark's rule formula
-      final dosage = (weight / 70) * adultDosage;
+      final dosage = (weight / 150) * adultDosage;
       setState(() {
         _result = 'The correct dosage for the child is: ${dosage.toStringAsFixed(2)} mg';
       });
     } else {
       setState(() {
-        _result = 'Please enter valid weight and adult dosage.';
+        _result = 'Please enter valid weight(lb) and adult dosage(mg).';
       });
     }
   }
