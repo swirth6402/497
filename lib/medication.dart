@@ -1,3 +1,5 @@
+import 'child.dart';
+
 class Medication {
   final String? brandName;
   final String genericName;
@@ -6,6 +8,7 @@ class Medication {
   final String activeIngredient;
   final String dosageAndAdministration;
   final String description;
+  Child? child; 
   bool isChecked;
   // Add other fields as needed
 
@@ -18,6 +21,7 @@ class Medication {
     required this.dosageAndAdministration,
     this.isChecked = false,
     required this.description,
+    this.child,
   });
 
   factory Medication.fromJson(Map<String, dynamic> json) {

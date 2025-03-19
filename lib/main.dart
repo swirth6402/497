@@ -192,7 +192,7 @@ class MyHomePage extends State<HomePage> {
                 const Divider(height: 32.0),
                 // ********** Medication Checklist Section **********
                 Text(
-                      "Medications Needed Today",
+                      "Medications Needed  ${_selectedDate.month}/${_selectedDate.day} ",
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                 ListView.builder(
@@ -286,12 +286,50 @@ class MyMedicationLookupState extends State<MedicationLookup> {
 
   Future<List<Medication>> _searchMedications(String query) async {
     try {
-      return await searchMedications(query);  //Call the searchMedications function from your api_service.dart file
+      return await searchMedications(query);  // calls the searchMedications function from the api_service.dart file
     } catch (e) {
       print('Search error: $e');
       rethrow; // Re-throw the exception to be handled higher up
     }
   }
+
+  Future<Child?> _showSelectChildDialog(BuildContext context) {
+  return showDialog<Child>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text("Select a Child"),
+        content: Container(
+          width: double.maxFinite,
+          child: children.isEmpty 
+              ? const Text("No children added")
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: children.length,
+                  itemBuilder: (context, index) {
+                    final child = children[index];
+                    return ListTile(
+                      title: Text(child.childName),
+                      onTap: () {
+                        Navigator.pop(context, child);
+                      },
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text("Cancel"),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 
   @override
   
@@ -305,7 +343,7 @@ class MyMedicationLookupState extends State<MedicationLookup> {
       ),
       body: Column(
         children: [
-          // Search Section (remains the same)
+          // Search Section
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
@@ -357,9 +395,10 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                             return ListTile(
                               title: Text(med.genericName),
                               subtitle: Text(med.description),
-                              trailing: ElevatedButton(
-                                child: const Text('Add'),
-                                onPressed: () {
+                              trailing: TextButton(
+                                child: const Text("Add"),
+                                onPressed: () async {
+                                  Child? selectedChild = await _showSelectChildDialog(context);
                                   appState.addItem(Item(med, false));
                                 },
                               ),
