@@ -3,9 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'api_service.dart';
 import 'medication.dart';
+import 'child.dart';
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:easy_date_timeline/easy_date_timeline.dart';
+
+
+
+// initalize list of children 
+List<Child> children = [];
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,50 +61,166 @@ class HomePage extends StatefulWidget {
 
   @override
   MyHomePage createState() => MyHomePage();
+  
 }
 
 class MyHomePage extends State<HomePage> {
   final TextEditingController newItemController = TextEditingController();
   final TextEditingController searchController = TextEditingController();
+   DateTime _selectedDate = DateTime.now();
+
+  void _showAddChildDialog(BuildContext context) {
+  final nameController = TextEditingController();
+  final ageController = TextEditingController();
+  final weightController = TextEditingController();
+ 
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text("Add Child"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: "Child Name"),
+            ),
+            TextField(
+              controller: ageController,
+              decoration: const InputDecoration(labelText: "Child Age"),
+              keyboardType: TextInputType.number,
+            ),
+            TextField(
+              controller: weightController,
+              decoration: const InputDecoration(labelText: "Child Weight (lbs)"),
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              final age = int.tryParse(ageController.text);
+              final weight = int.tryParse(weightController.text);
+              if (name.isNotEmpty && age != null && weight != null) {
+                setState(() {
+                  children.add(
+                    Child(childName: name, childAge: age, childWeight: weight),
+                  );
+                });
+                Navigator.pop(context);
+              }
+            },
+            child: const Text("Add"),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
 
+   
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home'),
       ),
-      body: Column(
+      body: 
+    
+      Column( // u put scrollable content in columns 
         children: [
-         
-          // Existing checklist
-          Expanded(
-            child: ListView.builder(
-              itemCount: appState.items.length,
-              itemBuilder: (context, index) {
-                final item = appState.items[index];
-                return CheckboxListTile(
-                   title: Text(
-                   item.medication.genericName, 
-                    style: const TextStyle(fontWeight: FontWeight.bold)
-                    ),
-                  value: item.isChecked,
-                  onChanged: (bool? value) {
-                    appState.toggleChecked(item);
-                  },
-                );
+            EasyDateTimeLinePicker(
+              focusedDate: _selectedDate,
+              firstDate: DateTime(2024, 3, 18),
+              lastDate: DateTime(2030, 3, 18),
+              onDateChange: (date) {
+                setState(() {
+                  _selectedDate = date;
+                });
               },
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
+           Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(8.0),
               children: [
-              
+                // Children 
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Children",
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    ElevatedButton(
+                      onPressed: () => _showAddChildDialog(context),
+                      child: const Text("Add Child"),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8.0),
+                children.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        child: Text("No children added yet."),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: children.length,
+                        itemBuilder: (context, index) {
+                          final child = children[index];
+                          return ListTile(
+                            title: Text(child.childName),
+                            subtitle: Text(
+                                "Age: ${child.childAge} | Weight: ${child.childWeight} lbs"),
+                          );
+                        },
+                      ),
+                const Divider(height: 32.0),
+                // ********** Medication Checklist Section **********
+                Text(
+                      "Medications Needed Today",
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: appState.items.length,
+                  itemBuilder: (context, index) {
+                    final item = appState.items[index];
+                    return CheckboxListTile(
+                      title: Text(
+                        item.medication.genericName,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      value: item.isChecked,
+                      onChanged: (bool? value) {
+                        appState.toggleChecked(item);
+                      },
+                    );
+                  },
+                ),
               ],
             ),
           ),
+        
+          const Divider(height: 32.0),
+    
+     
+        
           ElevatedButton(
             onPressed: () {
               Navigator.push(
@@ -377,18 +500,6 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
 }
 // ***************************** DOSAGE CALCULATOR *********************************
 
-// class MyApp extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       title: 'Clark\'s Rule Dosage Calculator',
-//       theme: ThemeData(
-//         primarySwatch: Colors.blue,
-//       ),
-//       home: DosageCalculatorPage(),
-//     );
-//   }
-// }
 
 class DosageCalculatorPage extends StatefulWidget {
   @override
@@ -400,6 +511,7 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _adultDosageController = TextEditingController();
   String _result = '';
+  Child? _selectedChild;
 
   // Function to calculate dosage using Clark's rule
   void _calculateDosage() {
@@ -433,15 +545,41 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Enter the weight of the child in kg and the adult dosage in mg:',
+                'Select a child, or enter the weight of the child in pounds. Then, enter the adult dosage in mg:',
                 style: TextStyle(fontSize: 18),
               ),
+               Row(
+                children: [
+                  const Text("Select Child: "),
+                  const SizedBox(width: 16.0),
+                  DropdownButton<Child>(
+                    hint: const Text("Select a child"),
+                    value: _selectedChild,
+                    items: children.map((child) {
+                      return DropdownMenuItem<Child>(
+                        value: child,
+                        child: Text(child.childName),
+                      );
+                    }).toList(),
+                    onChanged: (Child? child) {
+                      setState(() {
+                        _selectedChild = child;
+                        if (child != null) {
+                          _weightController.text =
+                              child.childWeight.toString();
+                        }
+                      });
+                    },
+                  ),
+                ],
+              ),
+            
               SizedBox(height: 20),
               // Input for child weight
               TextFormField(
                 controller: _weightController,
                 decoration: InputDecoration(
-                  labelText: 'Child\'s Weight (kg)',
+                  labelText: 'Child\'s Weight (lbs)',
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.number,
