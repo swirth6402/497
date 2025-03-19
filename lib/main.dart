@@ -107,6 +107,15 @@ class MyHomePage extends State<HomePage> {
             },
             child: const Text('Medication Lookup'),
           ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => DosageCalculatorPage()),
+              );
+            },
+            child: const Text('Dosage checker'),
+          ),
         ],
       ),
     );
@@ -362,6 +371,122 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
             child: const Text('Sync FDA Data'),
           ),
         ],
+      ),
+    );
+  }
+}
+// ***************************** DOSAGE CALCULATOR *********************************
+
+// class MyApp extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       title: 'Clark\'s Rule Dosage Calculator',
+//       theme: ThemeData(
+//         primarySwatch: Colors.blue,
+//       ),
+//       home: DosageCalculatorPage(),
+//     );
+//   }
+// }
+
+class DosageCalculatorPage extends StatefulWidget {
+  @override
+  DosageCalculatorPageState createState() => DosageCalculatorPageState();
+}
+
+class DosageCalculatorPageState extends State<DosageCalculatorPage> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _weightController = TextEditingController();
+  final TextEditingController _adultDosageController = TextEditingController();
+  String _result = '';
+
+  // Function to calculate dosage using Clark's rule
+  void _calculateDosage() {
+    final weight = double.tryParse(_weightController.text);
+    final adultDosage = double.tryParse(_adultDosageController.text);
+
+    if (weight != null && adultDosage != null && weight > 0 && adultDosage > 0) {
+      // Clark's rule formula
+      final dosage = (weight / 70) * adultDosage;
+      setState(() {
+        _result = 'The correct dosage for the child is: ${dosage.toStringAsFixed(2)} mg';
+      });
+    } else {
+      setState(() {
+        _result = 'Please enter valid weight and adult dosage.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Dosage Calculator'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Enter the weight of the child in kg and the adult dosage in mg:',
+                style: TextStyle(fontSize: 18),
+              ),
+              SizedBox(height: 20),
+              // Input for child weight
+              TextFormField(
+                controller: _weightController,
+                decoration: InputDecoration(
+                  labelText: 'Child\'s Weight (kg)',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter the child\'s weight.';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 20),
+              // Input for adult dosage
+              TextFormField(
+                controller: _adultDosageController,
+                decoration: InputDecoration(
+                  labelText: 'Adult Dosage (mg)',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter the adult dosage.';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 20),
+              // Calculate button
+              ElevatedButton(
+                onPressed: () {
+                  if (_formKey.currentState?.validate() ?? false) {
+                    _calculateDosage();
+                  }
+                },
+                child: Text('Calculate Dosage'),
+              ),
+              SizedBox(height: 20),
+              // Result display
+              Text(
+                _result,
+                style: TextStyle(fontSize: 18, color: Colors.green),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
