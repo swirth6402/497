@@ -369,23 +369,20 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                                 child: const Text('Add'),
                                 onPressed: () async {
                                   appState.addItem(Item(med, false));
+                                  await EasyNotifications.
                                   // add notification here!!!
-                                  // Show notification with image and custom style
-                                  await EasyNotifications().createNotification(
+                                  // ✅ Correct way to schedule a notification
+                                  await EasyNotifications.scheduleMessage(
                                     title: 'Medication Reminder',
-                                    content: 'Time for your meeting!',
-                                    schedule: NotificationSchedule(
-                                      time: DateTime.now().add(const Duration(hours: 1)),
+                                    body: 'Time to take your medication: ${med.genericName}',
+                                    schedule: ScheduleDate(
+                                      date: DateTime.now().add(const Duration(hours: 1)), // Schedule 1 hour later
                                     ),
                                   );
-                                  await EasyNotifications().showNotification(
+                                  // ✅ Correct way to show an instant notification
+                                  await EasyNotifications().show(
                                     title: 'Styled Notification',
                                     body: 'With custom appearance',
-                                  );
-                                  await EasyNotifications().scheduleNotification(
-                                    title: 'Medication Reminder',
-                                    body: 'Time for your meeting!',
-                                    scheduledTime: DateTime.now().add(const Duration(hours: 1)),
                                   );
                                 },
                               ),
@@ -456,60 +453,39 @@ class InteractionChecker extends StatefulWidget {
 }
 
 class MyInteractionCheckerState extends State<InteractionChecker> {
-  late Future<List<String>> _interactionResults;
+  final TextEditingController newItemController = TextEditingController();
+  final TextEditingController searchController = TextEditingController();
+  List<Medication> _searchResults = []; // Use a private variable
 
-  @override
-  void initState() {
-    super.initState();
-    // Trigger interaction check when widget is loaded or when medications change
-    _interactionResults = checkInteractions(
-      widget.selectedItems.map((item) => item.medication).toList(),
-    );
-  }
-
-  // Check interactions for all pairs of medications in the list
-  Future<List<String>> checkInteractions(List<Medication> medications) async {
+  Future<List<Medication>> _searchMedications(String query) async {
     try {
-      List<String> interactions = [];
-      
-      // Iterate through all pairs of medications
-      for (int i = 0; i < medications.length; i++) {
-        for (int j = i + 1; j < medications.length; j++) {
-          // Implement your interaction checking logic here
-          if (medications[i].genericName == medications[j].genericName) {
-            
-            .add(
-                "Potential interaction between ${medications[i].genericName} and ${medications[j].genericName}");
-          }
-        }
-      }
-
-      return interactions.isNotEmpty
-          ? interactions
-          : ["No interactions found between selected medications."];
+      return await searchMedications(query);  //Call the searchMedications function from your api_service.dart file
     } catch (e) {
-      print('Error checking interactions: $e');
-      return ["Error checking interactions"];
+      print('Search error: $e');
+      rethrow; // Re-throw the exception to be handled higher up
     }
   }
-
   @override
   Widget build(BuildContext context) {
+    var appState = context.watch<MyAppState>();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Interaction Checker'),
       ),
       body: Column(
+        
         children: [
           Text(
-            'Selected Medications for Interaction',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
+              'Selected Medications for Interaction',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
 
-          // List of selected medications
+          // checked items
           Expanded(
             child: widget.selectedItems.isEmpty
-                ? const Center(child: Text('No medications selected.'))
+                ? const Center(
+                    child: Text('No medications selected.'),
+                  )
                 : ListView.builder(
                     itemCount: widget.selectedItems.length,
                     itemBuilder: (context, index) {
@@ -524,55 +500,18 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
                   ),
           ),
 
-          // FutureBuilder for interactions
-          FutureBuilder<List<String>>(
-            future: _interactionResults,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              } else if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
-              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(child: Text('No interactions found.'));
-              } else {
-                return Expanded(
-                  child: ListView.builder(
-                    itemCount: snapshot.data!.length,
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                        title: Text(
-                          snapshot.data![index],
-                          style: const TextStyle(
-                              color: Colors.red, fontWeight: FontWeight.bold),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              }
-            },
-          ),
-
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Column(
               children: [
-                // Search bar can be added for searching medications
-                TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Search Medications',
-                    border: OutlineInputBorder(),
-                  ),
-                  // Implement search functionality if needed
-                ),
+              
               ],
             ),
           ),
-
-          // Sync FDA data button
+          
           ElevatedButton(
             onPressed: () async {
-              await syncFDAData(); // Sync FDA Data function
+              await syncFDAData();
             },
             child: const Text('Sync FDA Data'),
           ),

@@ -20,7 +20,7 @@ dependencies:
   provider: ^6.1.2
   google_fonts: ^6.2.1
   easy_date_timeline: ^2.0.9
-  easy_notifications: ^1.1.9
+  easy_notifications: ^1.2.5
 
 dev_dependencies:
   flutter_test:
