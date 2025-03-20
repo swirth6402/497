@@ -5,11 +5,12 @@ import 'package:collection/collection.dart';
 import 'api_service.dart';
 import 'medication.dart';
 import 'child.dart';
+import 'secondscreen.dart';
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:easy_date_timeline/easy_date_timeline.dart';
-import 'package:easy_notifications/easy_notifications.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/material.dart';
 
 
 
@@ -17,18 +18,66 @@ import 'package:easy_notifications/easy_notifications.dart';
 // initalize list of children 
 List<Child> children = [];
 void main() async {
+  
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
   // Add debug print
-  print("Initializing EasyNotifications...");
-  await EasyNotifications.init();
-  print("EasyNotifications initialized!");
+  final DarwinInitializationSettings initializationSettingsIOS =
+      DarwinInitializationSettings(
+    requestSoundPermission: true,
+    requestBadgePermission: true,
+    requestAlertPermission: true,
+  );
 
+  final InitializationSettings initializationSettings =
+      InitializationSettings(iOS: initializationSettingsIOS);
+      
+  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+    
+  await flutterLocalNotificationsPlugin.initialize(
+    initializationSettings,
+    onDidReceiveNotificationResponse: (NotificationResponse response) {
+      final String? payload = response.payload;
+      if (payload != null) {
+        debugPrint('Notification payload: $payload');
+      }
+      navigatorKey.currentState?.push(
+        MaterialPageRoute<void>(
+          builder: (context) => SecondScreen(payload ?? "No Payload"),
+        ),
+      );
+    },
+  );
+
+  Future<void> requestIOSPermissions() async {
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<DarwinFlutterLocalNotificationsPlugin>()
+      ?.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+}
+
+  void onDidReceiveNotificationResponse(NotificationResponse notificationResponse) async {
+    final String? payload = notificationResponse.payload;
+    if (notificationResponse.payload != null) {
+      debugPrint('notification payload: $payload');
+    }
+    // makes it so that second screen handles null case, so payload will never be null when it goes to second screen
+    navigatorKey.currentState?.push(
+      MaterialPageRoute<void>(
+        builder: (context) => SecondScreen(payload ?? "No Payload"),
+      ),
+    );
+  }
   runApp(const MyApp());
 }
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
   
@@ -55,6 +104,7 @@ class MyApp extends StatelessWidget {
             )
           )
         ),
+        navigatorKey: navigatorKey,
         home: const HomePage(), 
       ),
     );
@@ -149,16 +199,6 @@ class MyHomePage extends State<HomePage> {
     
       Column( // u put scrollable content in columns 
         children: [
-            EasyDateTimeLinePicker(
-              focusedDate: _selectedDate,
-              firstDate: DateTime(2024, 3, 18),
-              lastDate: DateTime(2030, 3, 18),
-              onDateChange: (date) {
-                setState(() {
-                  _selectedDate = date;
-                });
-              },
-            ),
            Expanded(
             child: ListView(
               padding: const EdgeInsets.all(8.0),
@@ -369,21 +409,6 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                                 child: const Text('Add'),
                                 onPressed: () async {
                                   appState.addItem(Item(med, false));
-                                  await EasyNotifications.
-                                  // add notification here!!!
-                                  // ✅ Correct way to schedule a notification
-                                  await EasyNotifications.scheduleMessage(
-                                    title: 'Medication Reminder',
-                                    body: 'Time to take your medication: ${med.genericName}',
-                                    schedule: ScheduleDate(
-                                      date: DateTime.now().add(const Duration(hours: 1)), // Schedule 1 hour later
-                                    ),
-                                  );
-                                  // ✅ Correct way to show an instant notification
-                                  await EasyNotifications().show(
-                                    title: 'Styled Notification',
-                                    body: 'With custom appearance',
-                                  );
                                 },
                               ),
                             );
