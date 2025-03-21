@@ -8,7 +8,8 @@ import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:easy_date_timeline/easy_date_timeline.dart';
-
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'notification.dart';
 
 
 // initalize list of children 
@@ -16,9 +17,15 @@ List<Child> children = [];
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
+   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await initializeNotifications((NotificationResponse response) {
+    debugPrint('Notification tapped with payload: ${response.payload}');
+    // add things here
+  });
+ 
   runApp(const MyApp());
 }
 
@@ -57,6 +64,8 @@ class MyApp extends StatelessWidget {
 
 // *************************** HOME PAGE *********************************************
 class HomePage extends StatefulWidget {
+
+  
   const HomePage ({super.key});
 
   @override
@@ -73,6 +82,17 @@ class MyHomePage extends State<HomePage> {
   final nameController = TextEditingController();
   final ageController = TextEditingController();
   final weightController = TextEditingController();
+
+  void onDidReceiveNotificationResponse(NotificationResponse notificationResponse) async {
+    final String? payload = notificationResponse.payload;
+    if (notificationResponse.payload != null) {
+      debugPrint('notification payload: $payload');
+    }
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(builder: (context) => MedicationLookup()),
+    );
+}
  
   showDialog(
     context: context,
@@ -100,6 +120,7 @@ class MyHomePage extends State<HomePage> {
         ),
         actions: [
           TextButton(
+
             onPressed: () {
               Navigator.pop(context);
             },
@@ -223,6 +244,7 @@ class MyHomePage extends State<HomePage> {
         
           ElevatedButton(
             onPressed: () {
+        
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => MedicationLookup()),
@@ -239,6 +261,13 @@ class MyHomePage extends State<HomePage> {
             },
             child: const Text('Dosage checker'),
           ),
+          ElevatedButton(
+            
+            onPressed: () async {
+              await showSimpleNotification();
+            },
+            child: const Text('Show Notification'),
+          )
         ],
       ),
     );
