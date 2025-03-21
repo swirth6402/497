@@ -1,5 +1,6 @@
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
+import 'package:medmanage/local_notifications.dart';
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
 import 'api_service.dart';
@@ -11,71 +12,32 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
+import 'local_notifications.dart';
 
 
 
 
 // initalize list of children 
 List<Child> children = [];
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 void main() async {
-  
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  // Add debug print
-  final DarwinInitializationSettings initializationSettingsIOS =
-      DarwinInitializationSettings(
-    requestSoundPermission: true,
-    requestBadgePermission: true,
-    requestAlertPermission: true,
-  );
-
-  final InitializationSettings initializationSettings =
-      InitializationSettings(iOS: initializationSettingsIOS);
-      
-  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-    FlutterLocalNotificationsPlugin();
-    
-  await flutterLocalNotificationsPlugin.initialize(
-    initializationSettings,
-    onDidReceiveNotificationResponse: (NotificationResponse response) {
-      final String? payload = response.payload;
-      if (payload != null) {
-        debugPrint('Notification payload: $payload');
-      }
-      navigatorKey.currentState?.push(
-        MaterialPageRoute<void>(
-          builder: (context) => SecondScreen(payload ?? "No Payload"),
-        ),
-      );
-    },
-  );
-
-  Future<void> requestIOSPermissions() async {
-  await flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<DarwinFlutterLocalNotificationsPlugin>()
-      ?.requestPermissions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-}
-
-  void onDidReceiveNotificationResponse(NotificationResponse notificationResponse) async {
-    final String? payload = notificationResponse.payload;
-    if (notificationResponse.payload != null) {
-      debugPrint('notification payload: $payload');
-    }
-    // makes it so that second screen handles null case, so payload will never be null when it goes to second screen
-    navigatorKey.currentState?.push(
-      MaterialPageRoute<void>(
-        builder: (context) => SecondScreen(payload ?? "No Payload"),
-      ),
-    );
-  }
+  
   runApp(const MyApp());
 }
+
+void onDidReceiveNotificationResponse(NotificationResponse notificationResponse) {
+  final String? payload = notificationResponse.payload;
+  debugPrint('Notification Clicked: $payload');
+}
+
+
+
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 class MyApp extends StatelessWidget {
@@ -319,6 +281,24 @@ class Item {
 
 // ***************************** MEDICATION LOOKUP *********************************************
 
+Future<void> showNotification(item) async {
+  const DarwinNotificationDetails iOSDetails = DarwinNotificationDetails(
+    presentAlert: true,
+    presentBadge: true,
+    presentSound: true,
+  );
+
+  const NotificationDetails details = NotificationDetails(iOS: iOSDetails);
+
+  await flutterLocalNotificationsPlugin.show(
+    0, // Notification ID
+    'Reminder', // Title
+    'Time to take your medication!', // Body
+    details,
+  );
+}
+
+
 class MedicationLookup extends StatefulWidget {
   const MedicationLookup({super.key}); // This forwards the key to the StatefulWidget's constructor
 
@@ -408,7 +388,10 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                               trailing: ElevatedButton(
                                 child: const Text('Add'),
                                 onPressed: () async {
+                                  // ADD NOTIFICATION BUTTON HERE
+                                  local_notifications.showNotification(title:'Sample title', body:'It works!');
                                   appState.addItem(Item(med, false));
+                                  
                                 },
                               ),
                             );
