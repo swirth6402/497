@@ -43,6 +43,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
   
+  
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
@@ -311,6 +312,15 @@ class MyMedicationLookupState extends State<MedicationLookup> {
   final TextEditingController searchController = TextEditingController();
   List<Medication> _searchResults = []; // Use a private variable
 
+  //trying to initialize instance on notification lookup
+  final LocalNotifications localNotifications = LocalNotifications();
+  @override
+  void initState() {
+    super.initState();
+    // Initialize notifications
+    localNotifications.initNotifications();
+  }
+
   Future<List<Medication>> _searchMedications(String query) async {
     try {
       return await searchMedications(query);  //Call the searchMedications function from your api_service.dart file
@@ -325,6 +335,9 @@ class MyMedicationLookupState extends State<MedicationLookup> {
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
     final selectedItems = appState.items.where((item) => item.isChecked).toList();
+
+    // Initialize notifications
+    localNotifications.initNotifications();
 
     return Scaffold(
       appBar: AppBar(
