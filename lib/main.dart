@@ -473,7 +473,16 @@ class MyMedicationLookupState extends State<MedicationLookup> {
           ),
           if (selectedItems.length == 2)
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+                String result = await checkDrugInteraction(
+                  selectedItems[0].medication.genericName,
+                  selectedItems[1].medication.genericName,
+                );
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(result)),
+                );
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => InteractionChecker(selectedItems: selectedItems)),
@@ -501,37 +510,61 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
   final TextEditingController newItemController = TextEditingController();
   final TextEditingController searchController = TextEditingController();
   List<Medication> _searchResults = []; // Use a private variable
+  String? _interactionResult; // Store compatibility result
 
   Future<List<Medication>> _searchMedications(String query) async {
     try {
-      return await searchMedications(query);  //Call the searchMedications function from your api_service.dart file
+      return await searchMedications(query);  
     } catch (e) {
       print('Search error: $e');
-      rethrow; // Re-throw the exception to be handled higher up
+      rethrow; 
+    }
+  }
+
+  Future<void> _fetchInteractionResult() async {
+    if (widget.selectedItems.length == 2) {
+      try {
+        String result = await checkDrugInteraction(
+          widget.selectedItems[0].medication.genericName,
+          widget.selectedItems[1].medication.genericName,
+        );
+        setState(() {
+          _interactionResult = result;
+        });
+      } catch (e) {
+        setState(() {
+          _interactionResult = "Error fetching compatibility.";
+        });
+      }
+    } else {
+      setState(() {
+        _interactionResult = "Select exactly two medications.";
+      });
     }
   }
 
   @override
+  void initState() {
+    super.initState();
+    _fetchInteractionResult(); // Fetch compatibility when screen loads
+  }
+  
+  @override
   Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Interaction Checker'),
       ),
       body: Column(
-        
         children: [
-          Text(
-              'Selected Medications for Interaction',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+          const Text(
+            'Selected Medications for Interaction',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
 
-          // checked items
           Expanded(
             child: widget.selectedItems.isEmpty
-                ? const Center(
-                    child: Text('No medications selected.'),
-                  )
+                ? const Center(child: Text('No medications selected.'))
                 : ListView.builder(
                     itemCount: widget.selectedItems.length,
                     itemBuilder: (context, index) {
@@ -545,16 +578,14 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
                     },
                   ),
           ),
-
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Column(
-              children: [
-              
-              ],
+            child: Text(
+              _interactionResult ?? "Checking compatibility...",
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
             ),
           ),
-          
           ElevatedButton(
             onPressed: () async {
               await syncFDAData();
