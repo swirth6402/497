@@ -60,9 +60,7 @@ Future<void> showSimpleNotification() async {
     presentBadge: true,
     presentSound: true,
   );
-  print("made it here");
   final NotificationDetails details = NotificationDetails(iOS: iosDetails);
-  print("made it here 2");
   await flutterLocalNotificationsPlugin
     .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
     ?.requestPermissions(
@@ -70,13 +68,11 @@ Future<void> showSimpleNotification() async {
       badge: true,
       sound: true,
     );
-  print("made it here 3");
   await flutterLocalNotificationsPlugin.show(
     1,
-    'NOTIFICATION',
-    'yuhhhhhhhhh',
+    'Reminder',
+    'New medicine to take look at check list',
     details,
     payload: 'simple_payload',
   );
-   print("made it here 4");
 }
