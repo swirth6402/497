@@ -8,6 +8,7 @@ class Medication {
   final String activeIngredient;
   final String dosageAndAdministration;
   final String description;
+  int dosage; 
   Child? child; 
   bool isChecked;
   bool isRecurring; 
@@ -19,6 +20,7 @@ class Medication {
   Medication({
     required this.id,
     this.brandName,
+    this.dosage = 0,
     required this.genericName,
     this.manufacturerName,
     required this.activeIngredient,
