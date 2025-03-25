@@ -1,3 +1,5 @@
+import 'child.dart';
+
 class Medication {
   final String? brandName;
   final String genericName;
@@ -6,19 +8,29 @@ class Medication {
   final String activeIngredient;
   final String dosageAndAdministration;
   final String description;
+  int dosage; 
+  Child? child; 
   bool isChecked;
+  bool isRecurring; 
+  // list representing days that medication is taken, 0 = sun, 1= mon, 2= tues, 3= wed, 4= thurs, 5= fri, 6=sat
+  List<bool> daysUsed;
+  
   // Add other fields as needed
 
   Medication({
     required this.id,
     this.brandName,
+    this.dosage = 0,
     required this.genericName,
     this.manufacturerName,
     required this.activeIngredient,
     required this.dosageAndAdministration,
     this.isChecked = false,
+    this.isRecurring = false,
     required this.description,
-  });
+    this.child,
+    List<bool>? daysUsed,
+  }) : daysUsed = daysUsed ?? List.filled(7, false); 
 
   factory Medication.fromJson(Map<String, dynamic> json) {
     // Extract generic name from openfda field
