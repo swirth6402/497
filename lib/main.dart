@@ -752,3 +752,5 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
     );
   }
 }
+
+// ***************************** MEDICATION DESCRIPTION *********************************
