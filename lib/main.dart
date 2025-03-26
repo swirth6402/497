@@ -330,9 +330,6 @@ class MyMedicationLookupState extends State<MedicationLookup> {
   final TextEditingController newItemController = TextEditingController();
   final TextEditingController searchController = TextEditingController();
   List<Medication> _searchResults = []; // Use a private variable
-  final apiKey = 'AIzaSyBVUMrM4mMygy7ogEskMJQUfkYTC6buA4g';
-  bool _isLoading = false; 
-  String _simplifiedDescription = '';
 
   Future<List<Medication>> _searchMedications(String query) async {
     try {
@@ -340,31 +337,6 @@ class MyMedicationLookupState extends State<MedicationLookup> {
     } catch (e) {
       print('Search error: $e');
       rethrow; // Re-throw the exception to be handled higher up
-    }
-  }
-
-  Future<String> _simplifyDescription(String description) async {
-    setState(() {
-      _isLoading = true; // Set loading to true when starting the request
-      _simplifiedDescription = ''; // Clear Previous result
-    });
-    final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
-    final prompt =
-        'Summarize the following medical description in 30 words or less, focusing on the main use and side effects: $description';
-    try {
-      final response = await model.generateContent([Content.text(prompt)]);
-      final result = response.text ?? 'No simplified description available.';
-      setState(() {
-        _simplifiedDescription = result;
-        _isLoading = false; // Hide loading indicator
-      });
-      return result;
-    } catch (e) {
-      setState(() {
-        _simplifiedDescription = 'Error simplifying description: $e';
-        _isLoading = false;
-      });
-      return 'Error simplifying description: $e';
     }
   }
 
@@ -382,10 +354,12 @@ class MyMedicationLookupState extends State<MedicationLookup> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text("Select a Child:"),
+                // Using a DropdownButton for child selection
                 DropdownButton<Child>(
                   hint: const Text("Select a child"),
                   value: selectedChild,
                   onChanged: (Child? child) {
+                    // Update selection and rebuild dialog UI
                     selectedChild = child;
                     (context as Element).markNeedsBuild();
                   },
@@ -416,10 +390,11 @@ class MyMedicationLookupState extends State<MedicationLookup> {
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(context, {
-                  'child': selectedChild,
-                  'days': selectedDays,
-                });
+                 // Return a map with the selected values. CHECK
+                  Navigator.pop(context, {
+                    'child': selectedChild,
+                    'days': selectedDays,
+                  });
               },
               child: const Text("Confirm"),
             ),
@@ -430,7 +405,9 @@ class MyMedicationLookupState extends State<MedicationLookup> {
   }
 
 
+
   @override
+  
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
     final selectedItems = appState.items.where((item) => item.isChecked).toList();
@@ -441,6 +418,7 @@ class MyMedicationLookupState extends State<MedicationLookup> {
       ),
       body: Column(
         children: [
+          // Search Section
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
@@ -448,8 +426,10 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                 Expanded(
                   child: TextField(
                     controller: searchController,
-                    onChanged: (value) {
-                      setState(() {});
+                    onChanged: (value) { //This will trigger a rebuild when the text changes
+                      setState(() {
+                        //This will force a rebuild of the FutureBuilder
+                      });
                     },
                     decoration: const InputDecoration(
                       hintText: 'Search medications...',
@@ -459,47 +439,38 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                 IconButton(
                   icon: const Icon(Icons.search),
                   onPressed: () {
+                    // No need for async here; FutureBuilder handles the async nature
                     setState(() {});
                   },
                 ),
               ],
             ),
           ),
+
+          // FutureBuilder to display search results based on the search query
           FutureBuilder<List<Medication>>(
             future: searchController.text.isEmpty
                 ? Future.value([])
-                : _searchMedications(searchController.text),
+                : _searchMedications(searchController.text), //Only call the search function when text is not empty
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const CircularProgressIndicator();
+                return const CircularProgressIndicator(); //Show loading indicator
               } else if (snapshot.hasError) {
-                return Text('Error: ${snapshot.error}');
+                return Text('Error: ${snapshot.error}'); //Handle errors
               } else {
-                _searchResults = snapshot.data ?? [];
+                _searchResults = snapshot.data ?? []; // Update _searchResults
                 final appState = context.watch<MyAppState>();
                 return _searchResults.isEmpty
                     ? const SizedBox.shrink()
-                    : Expanded(
+                    : Expanded( // Make it expandable
                         child: ListView.builder(
                           itemCount: _searchResults.length,
                           itemBuilder: (context, index) {
                             final med = _searchResults[index];
                             return ListTile(
                               title: Text(med.genericName),
-                              subtitle: FutureBuilder<String>(
-                                future: _simplifyDescription(med.description),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return const Text("Simplifying...");
-                                  } else if (snapshot.hasError) {
-                                    return Text('Error: ${snapshot.error}');
-                                  } else {
-                                    // Use the _simplifiedDescription from the state
-                                    return Text(_isLoading ? "Simplifying..." : _simplifiedDescription);
-                                  }
-                                },
-                              ),
+                              //MAKE AI WRITE THE DESCRIPTION
+                              subtitle: Text(med.description),
                               trailing: TextButton(
                                 child: const Text("Add"),
                                 onPressed: () async {
@@ -507,8 +478,12 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                                   if (result != null) {
                                     Child? child = result['child'];
                                     List<bool> days = result['days'];
+
+                                    // Update your medication instance:
                                     med.child = child;
                                     med.daysUsed = days;
+
+                                    // add to state CHECK
                                     appState.addItem(Item(med, false));
                                   }
                                 },
@@ -520,14 +495,17 @@ class MyMedicationLookupState extends State<MedicationLookup> {
               }
             },
           ),
+          // Existing checklist
           Expanded(
             child: ListView.builder(
               itemCount: appState.items.length,
               itemBuilder: (context, index) {
                 final item = appState.items[index];
                 return CheckboxListTile(
-                  title: Text(item.medication.genericName,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                   title: Text(
+                   item.medication.genericName, 
+                    style: const TextStyle(fontWeight: FontWeight.bold)
+                    ),
                   value: item.isChecked,
                   onChanged: (bool? value) {
                     appState.toggleChecked(item);
@@ -539,7 +517,9 @@ class MyMedicationLookupState extends State<MedicationLookup> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Column(
-              children: [],
+              children: [
+              
+              ],
             ),
           ),
           ElevatedButton(
@@ -553,9 +533,7 @@ class MyMedicationLookupState extends State<MedicationLookup> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (context) =>
-                          InteractionChecker(selectedItems: selectedItems)),
+                  MaterialPageRoute(builder: (context) => InteractionChecker(selectedItems: selectedItems)),
                 );
               },
               child: const Text('Interaction Checker'),
@@ -565,6 +543,7 @@ class MyMedicationLookupState extends State<MedicationLookup> {
     );
   }
 }
+
 
 // ***************************** INTERACTION CHECKER *********************************
 class InteractionChecker extends StatefulWidget {
@@ -847,27 +826,6 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-// ***************************** MEDICATION DESCRIPTION *********************************
-class MedicationDescriptionPage extends StatefulWidget {
-  const MedicationDescriptionPage({super.key});
-  @override
-  MedicationDescriptionState createState() => MedicationDescriptionState();
-}
-class MedicationDescriptionState extends State<MedicationDescriptionPage> {
-
-@override
-  Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Medication Descriptions'),
-      ),
-      body: const Center(
-        child: Text('Medication Description Page Content'),
       ),
     );
   }
