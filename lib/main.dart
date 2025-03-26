@@ -5,6 +5,7 @@ import 'api_service.dart';
 import 'medication.dart';
 import 'child.dart';
 import 'firebase_options.dart';
+import 'days_selector.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:easy_date_timeline/easy_date_timeline.dart';
@@ -156,7 +157,6 @@ class MyHomePage extends State<HomePage> {
     var appState = context.watch<MyAppState>();
 
    
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home'),
@@ -229,6 +229,13 @@ class MyHomePage extends State<HomePage> {
                         item.medication.genericName,
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
+                      subtitle: Text(
+                          item.medication.child != null
+                          ? (item.medication.isRecurring
+                              ? "${item.medication.child!.childName} - Recurring on ${recurringDaysText(item.medication.daysUsed)}"
+                              : item.medication.child!.childName)
+                          : "No child assigned",   
+                      ),
                       value: item.isChecked,
                       onChanged: (bool? value) {
                         appState.toggleChecked(item);
@@ -242,7 +249,6 @@ class MyHomePage extends State<HomePage> {
         
           const Divider(height: 32.0),
     
-     
         
           ElevatedButton(
             onPressed: () {
@@ -301,6 +307,16 @@ class Item {
   Item(this.medication, this.isChecked);
 }
 
+// helper function for recurring/days/etc 
+String recurringDaysText(List<bool> days) {
+  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  final selected = <String>[];
+  for (int i = 0; i < days.length; i++) {
+    if (days[i]) selected.add(dayLabels[i]);
+  }
+  return selected.isEmpty ? 'Not recurring' : selected.join(', ');
+}  
+
 // ***************************** MEDICATION LOOKUP *********************************************
 
 class MedicationLookup extends StatefulWidget {
@@ -324,42 +340,70 @@ class MyMedicationLookupState extends State<MedicationLookup> {
     }
   }
 
-  Future<Child?> _showSelectChildDialog(BuildContext context) {
-  return showDialog<Child>(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text("Select a Child"),
-        content: Container(
-          width: double.maxFinite,
-          child: children.isEmpty 
-              ? const Text("No children added")
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: children.length,
-                  itemBuilder: (context, index) {
-                    final child = children[index];
-                    return ListTile(
-                      title: Text(child.childName),
-                      onTap: () {
-                        Navigator.pop(context, child);
-                      },
+  // This is the code for the pop up that prompts you to select a child for your medication
+  Future<Map<String, dynamic>?> _showSelectChildDialog(BuildContext context) {
+    List<bool> selectedDays = List.filled(7, false);
+    Child? selectedChild;
+    return showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Medication Settings"),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Select a Child:"),
+                // Using a DropdownButton for child selection
+                DropdownButton<Child>(
+                  hint: const Text("Select a child"),
+                  value: selectedChild,
+                  onChanged: (Child? child) {
+                    // Update selection and rebuild dialog UI
+                    selectedChild = child;
+                    (context as Element).markNeedsBuild();
+                  },
+                  items: children.map((child) {
+                    return DropdownMenuItem<Child>(
+                      value: child,
+                      child: Text(child.childName),
                     );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                const Text("Select Days of Use:"),
+                DaysSelector(
+                  selectedDays: selectedDays,
+                  onChanged: (days) {
+                    selectedDays = days;
                   },
                 ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text("Cancel"),
+              ],
+            ),
           ),
-        ],
-      );
-    },
-  );
-}
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                 // Return a map with the selected values. CHECK
+                  Navigator.pop(context, {
+                    'child': selectedChild,
+                    'days': selectedDays,
+                  });
+              },
+              child: const Text("Confirm"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
 
   @override
@@ -430,8 +474,18 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                               trailing: TextButton(
                                 child: const Text("Add"),
                                 onPressed: () async {
-                                  Child? selectedChild = await _showSelectChildDialog(context);
-                                  appState.addItem(Item(med, false));
+                                  final result = await _showSelectChildDialog(context);
+                                  if (result != null) {
+                                    Child? child = result['child'];
+                                    List<bool> days = result['days'];
+
+                                    // Update your medication instance:
+                                    med.child = child;
+                                    med.daysUsed = days;
+
+                                    // add to state CHECK
+                                    appState.addItem(Item(med, false));
+                                  }
                                 },
                               ),
                             );
@@ -717,6 +771,7 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
                       });
                     },
                   ),
+
                 ],
               ),
             
