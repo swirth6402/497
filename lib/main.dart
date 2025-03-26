@@ -11,6 +11,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:easy_date_timeline/easy_date_timeline.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'notification.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 
 
 // initalize list of children 
@@ -467,6 +469,7 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                             final med = _searchResults[index];
                             return ListTile(
                               title: Text(med.genericName),
+                              //MAKE AI WRITE THE DESCRIPTION
                               subtitle: Text(med.description),
                               trailing: TextButton(
                                 child: const Text("Add"),
@@ -554,14 +557,46 @@ class InteractionChecker extends StatefulWidget {
 class MyInteractionCheckerState extends State<InteractionChecker> {
   final TextEditingController newItemController = TextEditingController();
   final TextEditingController searchController = TextEditingController();
-  List<Medication> _searchResults = []; // Use a private variable
+  List<Medication> _searchResults = [];
+  String _interactionResult = '';
+  bool _isLoading = false; // Add a loading state variable
 
-  Future<List<Medication>> _searchMedications(String query) async {
+  Future<String> _checkInteractions(List<Item> selectedItems) async {
+    setState(() {
+      _isLoading = true; // Set loading to true when starting the request
+      _interactionResult = ''; // Clear Previous result
+    });
+    if (selectedItems.length != 2) {
+      setState(() {
+        _isLoading = false; // Set loading to false if there's an error
+        _interactionResult= 'Please select exactly two medications to check for interactions.';
+      });
+      return _interactionResult;
+    }
+
+    final apiKey = 'AIzaSyBVUMrM4mMygy7ogEskMJQUfkYTC6buA4g'; // Got this from: https://docs.flutter.dev/ai-toolkit Gemini AI configuration
+    final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
+
+    final medication1 = selectedItems[0].medication.genericName;
+    final medication2 = selectedItems[1].medication.genericName;
+    final prompt =
+        'Is it safe to take $medication1 and $medication2 together? Reply yes or no';
     try {
-      return await searchMedications(query);  //Call the searchMedications function from your api_service.dart file
+      final response = await model.generateContent([Content.text(prompt)]);
+      final result = response.text ?? 'No response from AI.';
+
+      setState(() {
+      _interactionResult = result;
+      _isLoading = false; // Hide loading indicator
+      
+    });
+    return result;
     } catch (e) {
-      print('Search error: $e');
-      rethrow; // Re-throw the exception to be handled higher up
+      setState(() {
+        _interactionResult = 'Error checking interactions: $e';
+        _isLoading = false;
+      });
+      return 'Error checking interactions: $e';
     }
   }
 
@@ -601,19 +636,62 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
           ),
 
           Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              children: [
-              
-              ],
-            ),
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            children: [
+              if (widget.selectedItems.length == 2) // only show if 2 are selected.
+                ElevatedButton(
+                  onPressed: () async {
+                    final result = await _checkInteractions(widget.selectedItems);
+                    setState(() {
+                      _interactionResult = result;
+                    });
+                  },
+                  child: const Text('Check Interactions'),
+                ),
+              if (_isLoading) // Show loading indicator while checking
+                const CircularProgressIndicator()
+              else if (_interactionResult.isNotEmpty) // Show AI response
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: Column(
+                    children: [
+                      Text(
+                        _interactionResult, // AI's response
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      ),
+                      if (_interactionResult.toLowerCase().contains("yes"))
+                          Text("Compatible", style: TextStyle(color: Colors.green, fontSize: 18, fontWeight: FontWeight.bold))
+                      else if (_interactionResult.toLowerCase().contains("no"))
+                          Text("Incompatible", style: TextStyle(color: Colors.red, fontSize: 18, fontWeight: FontWeight.bold))
+                    ],
+                  ),
+                ),
+            ],
           ),
+        ),
           
           ElevatedButton(
             onPressed: () async {
               await syncFDAData();
             },
-            child: const Text('Sync FDA Data'),
+            child: Column(
+              mainAxisSize: MainAxisSize.min, // Ensures the button is not stretched
+              children: [
+                const Text(
+                  'Warning: Usage of AI in parsing openFDA data. '
+                  'Results may not be up to date or may vary. Use with caution.',
+                  style: TextStyle(fontSize: 12, color: Colors.red), // Smaller, red warning text
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 5), // Adds spacing between the texts
+                const Text(
+                  'Sync FDA Data',
+                  style: TextStyle(fontWeight: FontWeight.bold), // Makes it stand out
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -752,5 +830,3 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
     );
   }
 }
-
-// ***************************** MEDICATION DESCRIPTION *********************************
