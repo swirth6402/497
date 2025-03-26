@@ -830,3 +830,24 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
     );
   }
 }
+// ***************************** MEDICATION DESCRIPTION *********************************
+class MedicationDescriptionPage extends StatefulWidget {
+  const MedicationDescriptionPage({super.key});
+  @override
+  MedicationDescriptionState createState() => MedicationDescriptionState();
+}
+class MedicationDescriptionState extends State<MedicationDescriptionPage> {
+
+@override
+  Widget build(BuildContext context) {
+    var appState = context.watch<MyAppState>();
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Medication Descriptions'),
+      ),
+      body: const Center(
+        child: Text('Medication Description Page Content'),
+      ),
+    );
+  }
+}
