@@ -467,9 +467,18 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                           itemCount: _searchResults.length,
                           itemBuilder: (context, index) {
                             final med = _searchResults[index];
-                            return ListTile(
-                              title: Text(med.genericName),
-                              //MAKE AI WRITE THE DESCRIPTION
+                            return ListTile (
+                              title: GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => MedicationDescriptionPage(medication: med), // Pass the medication object
+                                    ),
+                                  );
+                                },
+                                child: Text(med.genericName),
+                              ),
                               subtitle: Text(med.description),
                               trailing: TextButton(
                                 child: const Text("Add"),
@@ -501,15 +510,25 @@ class MyMedicationLookupState extends State<MedicationLookup> {
               itemCount: appState.items.length,
               itemBuilder: (context, index) {
                 final item = appState.items[index];
+                final med = item.medication;
                 return CheckboxListTile(
-                   title: Text(
-                   item.medication.genericName, 
-                    style: const TextStyle(fontWeight: FontWeight.bold)
-                    ),
-                  value: item.isChecked,
+                  title: GestureDetector( // Wrap Text in GestureDetector
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MedicationDescriptionPage(medication: med),
+                      ),
+                    );
+                  },
+                    child: Text(med.genericName),
+                  ),
+                  subtitle: Text(med.description),
+                  value: item.isChecked, // Use the item's isChecked value
                   onChanged: (bool? value) {
                     appState.toggleChecked(item);
                   },
+                  controlAffinity: ListTileControlAffinity.leading,
                 );
               },
             ),
@@ -614,7 +633,7 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
               'Selected Medications for Interaction',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-
+          
           // checked items
           Expanded(
             child: widget.selectedItems.isEmpty
@@ -830,3 +849,43 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
     );
   }
 }
+
+// ***************************** MEDICATION DESCRIPTION (clickable via Medication LookUp) *********************************
+  class MedicationDescriptionPage extends StatefulWidget {
+    final Medication medication;
+    const MedicationDescriptionPage({super.key, required this.medication});
+    @override
+    MedicationDescriptionState createState() => MedicationDescriptionState();
+  }
+  class MedicationDescriptionState extends State<MedicationDescriptionPage> {
+ 
+ @override
+   Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Medication Description'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.medication.genericName,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              widget.medication.description,
+              style: const TextStyle(fontSize: 16),
+            ),
+            // Add more details as needed
+          ],
+        ),
+      ),
+    );
+  }
+ }
