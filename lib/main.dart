@@ -425,6 +425,7 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                             final med = _searchResults[index];
                             return ListTile(
                               title: Text(med.genericName),
+                              //MAKE AI WRITE THE DESCRIPTION
                               subtitle: Text(med.description),
                               trailing: TextButton(
                                 child: const Text("Add"),
@@ -509,13 +510,14 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
   Future<String> _checkInteractions(List<Item> selectedItems) async {
     setState(() {
       _isLoading = true; // Set loading to true when starting the request
+      _interactionResult = ''; // Clear Previous result
     });
-    print("MADE IT HERE 1");
     if (selectedItems.length != 2) {
       setState(() {
         _isLoading = false; // Set loading to false if there's an error
+        _interactionResult= 'Please select exactly two medications to check for interactions.';
       });
-      return 'Please select exactly two medications to check for interactions.';
+      return _interactionResult;
     }
 
     final apiKey = 'AIzaSyBVUMrM4mMygy7ogEskMJQUfkYTC6buA4g'; // Got this from: https://docs.flutter.dev/ai-toolkit Gemini AI configuration
@@ -523,16 +525,23 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
 
     final medication1 = selectedItems[0].medication.genericName;
     final medication2 = selectedItems[1].medication.genericName;
-    print("MADE IT HERE 2");
     final prompt =
         'Is it safe to take $medication1 and $medication2 together? Reply yes or no';
-    print("MADE IT HERE 3");
     try {
       final response = await model.generateContent([Content.text(prompt)]);
-      print("MADE IT HERE 4");
-      print(response.text);
-      return response.text ?? 'No response from the AI.';
+      final result = response.text ?? 'No response from AI.';
+
+      setState(() {
+      _interactionResult = result;
+      _isLoading = false; // Hide loading indicator
+      
+    });
+    return result;
     } catch (e) {
+      setState(() {
+        _interactionResult = 'Error checking interactions: $e';
+        _isLoading = false;
+      });
       return 'Error checking interactions: $e';
     }
   }
@@ -596,11 +605,12 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
                       Text(
                         _interactionResult, // AI's response
                         textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                       ),
-                      if (_interactionResult.toLowerCase().contains("compatible"))
-                        Text("Compatible", style: TextStyle(color: Colors.green))
-                      else if (_interactionResult.toLowerCase().contains("incompatible"))
-                        Text("Incompatible", style: TextStyle(color: Colors.red)),
+                      if (_interactionResult.toLowerCase().contains("yes"))
+                          Text("Compatible", style: TextStyle(color: Colors.green, fontSize: 18, fontWeight: FontWeight.bold))
+                      else if (_interactionResult.toLowerCase().contains("no"))
+                          Text("Incompatible", style: TextStyle(color: Colors.red, fontSize: 18, fontWeight: FontWeight.bold))
                     ],
                   ),
                 ),
