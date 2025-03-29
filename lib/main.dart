@@ -883,6 +883,7 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
               style: const TextStyle(fontSize: 16),
             ),
             // Add more details as needed
+            // Put add button 
           ],
         ),
       ),
