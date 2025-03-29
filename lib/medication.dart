@@ -8,7 +8,7 @@ class Medication {
   final String activeIngredient;
   final String dosageAndAdministration;
   final String description;
-  int dosage; 
+  double? dosage;  
   Child? child; 
   bool isChecked;
   bool isRecurring; 
