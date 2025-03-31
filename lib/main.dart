@@ -1149,9 +1149,45 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
     MedicationDescriptionState createState() => MedicationDescriptionState();
   }
   class MedicationDescriptionState extends State<MedicationDescriptionPage> {
- 
+    String _aiGeneratedDescription = '';
+    bool _isLoading = false;
+
+
+    @override
+    void initState() {
+      super.initState();
+      _generateDescription();
+    }
+
+    Future<void> _generateDescription() async {
+        setState(() {
+        _isLoading = true;
+        _aiGeneratedDescription = '';
+    });
+
+    final apiKey = 'AIzaSyBYOnoU40by4erAfWuRbPezXIVR_pCHQBM';
+    final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
+
+    final prompt = 'Describe the medication ${widget.medication.genericName} for users in a paragraph. 50 words';
+
+    try {
+      final response = await model.generateContent([Content.text(prompt)]);
+      final result = response.text ?? 'No description generated.';
+
+      setState(() {
+        _aiGeneratedDescription = result;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _aiGeneratedDescription = 'Error generating description: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
  @override
-   Widget build(BuildContext context) {
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Medication Description'),
@@ -1169,9 +1205,21 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
               ),
             ),
             const SizedBox(height: 16),
-            Text(
-              widget.medication.description,
-              style: const TextStyle(fontSize: 16),
+            if (_isLoading)
+              const CircularProgressIndicator()
+            else
+              Text(
+                _aiGeneratedDescription.isNotEmpty
+                    ? _aiGeneratedDescription
+                    : widget.medication.description, // Fallback to provided description
+                style: const TextStyle(fontSize: 16),
+              ),
+            const SizedBox(height: 16),
+            const Text(
+              'Warning: AI generated descriptions may not be accurate. '
+              'Use with caution.',
+              style: TextStyle(fontSize: 12, color: Colors.red),
+              textAlign: TextAlign.center,
             ),
             // Add more details as needed
           ],
@@ -1179,4 +1227,4 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
       ),
     );
   }
- }
+}
