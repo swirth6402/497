@@ -585,9 +585,10 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                   _searchResults = snapshot.data ?? [];
                   return _searchResults.isEmpty
                       ? const SizedBox.shrink()
-                      : Expanded(
-                          child: ListView.builder(
-                            itemCount: _searchResults.length,
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          itemCount: _searchResults.length,
                             itemBuilder: (context, index) {
                               final med = _searchResults[index];
                               return ListTile(
@@ -649,8 +650,7 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                                 ),
                               );
                             },
-                          ),
-                        );
+                          );
                 }
               },
             ),
