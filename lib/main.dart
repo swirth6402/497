@@ -78,17 +78,17 @@ class MainPageViewState extends State<MainPageView> {
   int _currentPageIndex = 0;
   
   final List<Widget> _pages = [
-    DosageCalculatorPage(),
     const HomePage(),
     const MedicationLookup(),
     InteractionChecker(),
+    DosageCalculatorPage(),
   ];
   
   final List<String> _pageTitles = [
-    'Dosage Calculator',
     'Home',
     'Medication Lookup',
     'Interaction Checker',
+    'Dosage Calculator',
   ];
 
   @override
@@ -126,10 +126,6 @@ class MainPageViewState extends State<MainPageView> {
         },
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.calculate),
-            label: 'Dosage',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'Home',
           ),
@@ -140,6 +136,10 @@ class MainPageViewState extends State<MainPageView> {
           BottomNavigationBarItem(
             icon: Icon(Icons.swap_horiz_rounded),
             label: 'Interactions',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calculate),
+            label: 'Dosage',
           ),
         ],
       ),
@@ -662,35 +662,7 @@ class MyMedicationLookupState extends State<MedicationLookup> {
               }
             },
           ),
-          // Existing checklist
-          // Expanded(
-          //   child: ListView.builder(
-          //     itemCount: appState.items.length,
-          //     itemBuilder: (context, index) {
-          //       final item = appState.items[index];
-          //       final med = item.medication;
-          //       return CheckboxListTile(
-          //         title: GestureDetector( // Wrap Text in GestureDetector
-          //         onTap: () {
-          //           Navigator.push(
-          //             context,
-          //             MaterialPageRoute(
-          //               builder: (context) => MedicationDescriptionPage(medication: med),
-          //             ),
-          //           );
-          //         },
-          //           child: Text(med.genericName),
-          //         ),
-          //         subtitle: Text(med.description),
-          //         value: item.isChecked, // Use the item's isChecked value
-          //         onChanged: (bool? value) {
-          //           appState.toggleChecked(item);
-          //         },
-          //         controlAffinity: ListTileControlAffinity.leading,
-          //       );
-          //     },
-          //   ),
-          // ),
+    
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Column(
@@ -824,7 +796,7 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
                 ),
                 const SizedBox(height: 8),
                 displayItems.isEmpty
-                  ? const Text('No medications selected. Add medications using the compare button or from your list below.')
+                  ? const Text('No medications selected. Add medications using the compare button on the search screen or from your list below.')
                   : Wrap(
                       spacing: 8.0,
                       children: displayItems.map((item) {
@@ -1141,17 +1113,18 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
 }
 
 
-// ***************************** MEDICATION DESCRIPTION (clickable via Medication LookUp) *********************************
+// ***************************** MEDICATION INFORMATION (clickable via Medication LookUp and homepage) *********************************
   class MedicationDescriptionPage extends StatefulWidget {
     final Medication medication;
     const MedicationDescriptionPage({super.key, required this.medication});
+    
     @override
     MedicationDescriptionState createState() => MedicationDescriptionState();
   }
   class MedicationDescriptionState extends State<MedicationDescriptionPage> {
     String _aiGeneratedDescription = '';
     bool _isLoading = false;
-
+    bool _isEditing = false;
 
     @override
     void initState() {
@@ -1160,9 +1133,16 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
     }
 
     Future<void> _generateDescription() async {
+      if (widget.medication.aiDescription != null && widget.medication.aiDescription!.isNotEmpty) {
         setState(() {
-        _isLoading = true;
-        _aiGeneratedDescription = '';
+          _aiGeneratedDescription = widget.medication.aiDescription!;
+          _isLoading = false;
+        });
+        return;
+    }
+
+    setState(() {
+      _isLoading = true;
     });
 
     final apiKey = 'AIzaSyBYOnoU40by4erAfWuRbPezXIVR_pCHQBM';
@@ -1175,11 +1155,10 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
       final result = (response.text != null && response.text!.trim().isNotEmpty)
       ? response.text!
       : 'No description available for this medication.';
-      print('Gemini response: ${response.text}'); //debug
-
-
+      //print('Gemini response: ${response.text}'); //debug
       setState(() {
         _aiGeneratedDescription = result;
+        widget.medication.aiDescription = result; 
         _isLoading = false;
       });
     } catch (e) {
@@ -1194,40 +1173,156 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Medication Description'),
+        title: const Text('Medication Information'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              widget.medication.genericName,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+            // Medication Name
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                 Text(
+                  widget.medication.genericName,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+              const SizedBox(height: 16),
+
+              // Description
+              _isLoading
+                  ? const CircularProgressIndicator()
+                  : Text(
+                      _aiGeneratedDescription.isNotEmpty
+                          ? _aiGeneratedDescription
+                          : widget.medication.description,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+
+              const SizedBox(height: 4),
+               // Warning
+              const Text(
+                'Warning: AI generated descriptions may not be accurate. '
+                'Use with caution.',
+                style: TextStyle(fontSize: 12, color: Colors.red),
+                textAlign: TextAlign.center,
               ),
+
+              ]
             ),
+
             const SizedBox(height: 16),
-            if (_isLoading)
-              const CircularProgressIndicator()
-            else
-              Text(
-                _aiGeneratedDescription.isNotEmpty
-                    ? _aiGeneratedDescription
-                    : widget.medication.description, // Fallback to provided description
-                style: const TextStyle(fontSize: 16),
-              ),
-            const SizedBox(height: 16),
-            const Text(
-              'Warning: AI generated descriptions may not be accurate. '
-              'Use with caution.',
-              style: TextStyle(fontSize: 12, color: Colors.red),
-              textAlign: TextAlign.center,
+
+            // scrollable section
+            Expanded(
+              child: ListView(
+                children: [
+                    // Child Dropdown
+                    Text("Assigned Child", style: Theme.of(context).textTheme.titleMedium),
+                    DropdownButton<Child>(
+                      value: widget.medication.child,
+                      hint: const Text("Select a child"),
+                      isExpanded: true,
+                      items: children.map((child) {
+                        return DropdownMenuItem<Child>(
+                          value: child,
+                          child: Text(child.childName),
+                        );
+                      }).toList(),
+                      onChanged: _isEditing
+                          ? (Child? newChild) {
+                              setState(() {
+                                widget.medication.child = newChild;
+                              });
+                            }
+                          : null,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Dosage Field
+                    Text("Dosage (mg)", style: Theme.of(context).textTheme.titleMedium),
+                    TextFormField(
+                      initialValue: (widget.medication.dosage != null && widget.medication.dosage! > 0)
+                          ? widget.medication.dosage!.toString()
+                          : '',
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Enter dosage',
+                      ),
+                      enabled: _isEditing,
+                      onChanged: (value) {
+                        final parsed = double.tryParse(value);
+                        if (parsed != null) {
+                          widget.medication.dosage = parsed;
+                        }
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Recurring Toggle
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("Recurring?", style: Theme.of(context).textTheme.titleMedium),
+                        Switch(
+                          value: widget.medication.isRecurring,
+                          onChanged: _isEditing
+                              ? (value) {
+                                  setState(() {
+                                    widget.medication.isRecurring = value;
+                                  });
+                                }
+                              : null,
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Days Selector
+                    Text("Days Taken", style: Theme.of(context).textTheme.titleMedium),
+                    DaysSelector(
+                      selectedDays: widget.medication.daysUsed,
+                      onChanged: _isEditing
+                          ? (updatedDays) {
+                              setState(() {
+                                widget.medication.daysUsed = updatedDays;
+                              });
+                            }
+                          : (_) {}, // when not editing
+                    ),
+
+                    const SizedBox(height: 24),
+  ],
             ),
-            // Add more details as needed
-          ],
-        ),
+          ),
+        ],
+      ),
+    ),
+
+      // FAB for Edit / Save Toggle
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          setState(() {
+            _isEditing = !_isEditing;
+          });
+
+          if (!_isEditing) {
+            // confirmation
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Changes saved')),
+            );
+          }
+        },
+        child: Icon(_isEditing ? Icons.check : Icons.edit),
+        tooltip: _isEditing ? 'Save Changes' : 'Edit Medication',
       ),
     );
   }

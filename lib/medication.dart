@@ -8,14 +8,13 @@ class Medication {
   final String activeIngredient;
   final String dosageAndAdministration;
   final String description;
+  String? aiDescription;
   double? dosage;  
   Child? child; 
   bool isChecked;
   bool isRecurring; 
   // list representing days that medication is taken, 0 = sun, 1= mon, 2= tues, 3= wed, 4= thurs, 5= fri, 6=sat
   List<bool> daysUsed;
-  
-  // Add other fields as needed
 
   Medication({
     required this.id,
@@ -29,6 +28,7 @@ class Medication {
     this.isRecurring = false,
     required this.description,
     this.child,
+    this.aiDescription,
     List<bool>? daysUsed,
   }) : daysUsed = daysUsed ?? List.filled(7, false); 
 
