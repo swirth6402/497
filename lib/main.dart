@@ -1215,7 +1215,8 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
               ]
             ),
 
-            const SizedBox(height: 16),
+            Divider(height: 32, thickness: 1, color: const Color.fromARGB(255, 0, 0, 0)),
+
 
             // scrollable section
             Expanded(
@@ -1324,6 +1325,7 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
         child: Icon(_isEditing ? Icons.check : Icons.edit),
         tooltip: _isEditing ? 'Save Changes' : 'Edit Medication',
       ),
+      
     );
   }
 }
