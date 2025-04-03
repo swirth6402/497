@@ -1172,7 +1172,11 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
 
     try {
       final response = await model.generateContent([Content.text(prompt)]);
-      final result = response.text ?? 'No description generated.';
+      final result = (response.text != null && response.text!.trim().isNotEmpty)
+      ? response.text!
+      : 'No description available for this medication.';
+      print('Gemini response: ${response.text}'); //debug
+
 
       setState(() {
         _aiGeneratedDescription = result;
