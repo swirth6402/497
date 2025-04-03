@@ -23,13 +23,15 @@ void main() async {
    await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
 
   await initializeNotifications((NotificationResponse response) {
     debugPrint('Notification tapped with payload: ${response.payload}');
     // add things here
   });
- 
+  
   runApp(const MyApp());
+  
 }
 
 class MyApp extends StatelessWidget {
@@ -169,6 +171,8 @@ class MyHomePage extends State<HomePage> {
   final ageController = TextEditingController();
   final weightController = TextEditingController();
 
+
+
   void onDidReceiveNotificationResponse(NotificationResponse notificationResponse) async {
     final String? payload = notificationResponse.payload;
     if (notificationResponse.payload != null) {
@@ -179,6 +183,7 @@ class MyHomePage extends State<HomePage> {
       MaterialPageRoute<void>(builder: (context) => MedicationLookup()),
     );
 }
+ 
  
   showDialog(
     context: context,
@@ -325,12 +330,12 @@ class MyHomePage extends State<HomePage> {
                                 },
                                 child: Text(item.medication.genericName),
                               ),
-                            subtitle: Text(
-                              item.medication.child != null
+                           subtitle: Text(
+                            item.medication.child != null
                                 ? (item.medication.isRecurring
-                                    ? "${item.medication.child!.childName} - Recurring on ${recurringDaysText(item.medication.daysUsed)}"
-                                    : item.medication.child!.childName)
-                                : "No child assigned",   
+                                    ? "${item.medication.child!.childName} • ${item.medication.dosage != null ? '${item.medication.dosage}mg • ' : ''}Recurring on ${recurringDaysText(item.medication.daysUsed)}"
+                                    : "${item.medication.child!.childName}${item.medication.dosage != null ? ' • ${item.medication.dosage}mg' : ''}")
+                                : "No child assigned",
                             ),
                             value: item.isChecked,
                             onChanged: (bool? value) {
@@ -460,6 +465,9 @@ class MyMedicationLookupState extends State<MedicationLookup> {
     List<bool> selectedDays = List.filled(7, false);
     Child? selectedChild;
     bool selectedIsRecurring = false; 
+    bool notifsOn = false;
+    TimeOfDay? selectedTime;
+
     
     return showDialog<Map<String, dynamic>>(
       context: context,
@@ -500,6 +508,35 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                       },
                     ),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Notify Me"),
+                        Switch(
+                          value: notifsOn,
+                          onChanged: (value) async {
+                            if (value) {
+                              final TimeOfDay? picked = await showTimePicker(
+                                context: context,
+                                initialTime: TimeOfDay.now(),
+                                initialEntryMode: TimePickerEntryMode.input,
+                              );
+                              if (picked != null) {
+                                setState(() {
+                                  notifsOn = true;
+                                  selectedTime = picked;
+                                });
+                              }
+                            } else {
+                              setState(() {
+                                notifsOn = false;
+                                selectedTime = null;
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                  ),
+                    Row(
                       children: [
                         Checkbox(
                           value: selectedIsRecurring,
@@ -525,10 +562,12 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context, {
-                      'child': selectedChild,
-                      'days': selectedDays,
-                      'isRecurring': selectedIsRecurring,
-                    });
+                    'child': selectedChild,
+                    'days': selectedDays,
+                    'isRecurring': selectedIsRecurring,
+                    'notifsOn': notifsOn,
+                    'time': selectedTime, // ← Add this!
+                  });
                   },
                   child: const Text("Confirm"),
                 ),
@@ -612,7 +651,7 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                                 },
                                 child: Text(med.genericName),
                               ),
-                              subtitle: Text(med.description),
+                              // subtitle: Text(med.description),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -639,16 +678,39 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                                   TextButton(
                                     child: const Text("Add"),
                                     onPressed: () async {
-                                      final result = await _showSelectChildDialog(context);
+                                       final result = await _showSelectChildDialog(context);
                                       if (result != null) {
                                         Child? child = result['child'];
                                         List<bool> days = result['days'];
                                         bool isRecurring = result['isRecurring'];
+                                        bool notifsOn = result['notifsOn'];
+                                        TimeOfDay? time = result['time'];
 
                                         med.child = child;
                                         med.daysUsed = days;
                                         med.isRecurring = isRecurring;
+                                        med.notifsOn = notifsOn;
 
+                                        if (notifsOn && time != null) {
+                                          med.notification = medNotification(
+                                            brandName: med.brandName,
+                                            genericName: med.genericName,
+                                            message: 'Time to take ${med.genericName}!',
+                                            dosage: med.dosage,
+                                            child: child,
+                                            isRecurring: isRecurring,
+                                            notifsOn: notifsOn,
+                                            daysUsed: days,
+                                            medication: med,
+                                            time: time,
+                                          );
+
+                                          if (isRecurring) {
+                                            await scheduleRecurringIOSNotification(med);
+                                          } else {
+                                            await scheduleMedicationNotification(med);
+                                          }
+                                        }
                                         appState.addItem(Item(med, false));
                                       }
                                     },
@@ -713,12 +775,17 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
   bool _isLoading = false; // Add a loading state variable
 
 
+
   // logic for adding items to interaction checker
   @override
   void initState() {
     super.initState();
     final appState = Provider.of<MyAppState>(context, listen: false);
     _selectedItems = widget.selectedInteraction ?? List.from(appState.interactionItems);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+        final appState = context.read<MyAppState>();
+        rescheduleAllRecurringNotifications(appState.items.map((i) => i.medication).toList());
+  });
   }
 
 
@@ -838,7 +905,7 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
                         
                         return ListTile(
                           title: Text(item.medication.genericName),
-                          subtitle: Text(item.medication.description),
+                          //subtitle: Text(item.medication.description),
                           trailing: IconButton(
                             icon: Icon(
                               isSelected ? Icons.check_circle : Icons.add_circle_outline,
@@ -946,7 +1013,7 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
     if (weight != null && adultDosage != null && weight > 0 && adultDosage > 0) {
       final dosage = (weight / 150) * adultDosage;
       setState(() {
-        _result = 'The correct dosage for the child is: ${dosage.toStringAsFixed(2)} mg';
+        _result = 'The correct dosage for the child is: ${dosage.toStringAsPrecision(3)} mg';
       });
       if (_selectedMedication != null) {
       // Get app state and update the medication
@@ -1141,6 +1208,24 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
         return;
     }
 
+    Future<void> _selectTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialEntryMode: TimePickerEntryMode.inputOnly,
+      initialTime: TimeOfDay.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        widget.medication.notification?.time = picked;  // FIX  
+      });
+    }
+
+    await _selectTime(context);
+    if (widget.medication.notifsOn) {
+      await scheduleMedicationNotification(widget.medication);
+    }
+  }
+
     setState(() {
       _isLoading = true;
     });
@@ -1202,6 +1287,7 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
                           : widget.medication.description,
                       style: const TextStyle(fontSize: 16),
                     ),
+                    
 
               const SizedBox(height: 4),
                // Warning
@@ -1268,22 +1354,81 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
                     const SizedBox(height: 16),
 
                     // Recurring Toggle
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("Recurring?", style: Theme.of(context).textTheme.titleMedium),
-                        Switch(
-                          value: widget.medication.isRecurring,
-                          onChanged: _isEditing
-                              ? (value) {
-                                  setState(() {
-                                    widget.medication.isRecurring = value;
-                                  });
-                                }
-                              : null,
-                        ),
-                      ],
-                    ),
+                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Recurring
+                      Row(
+                        children: [
+                          Text("Recurring?  ", style: Theme.of(context).textTheme.titleMedium),
+                          Switch(
+                            value: widget.medication.isRecurring,
+                            onChanged: _isEditing
+                                ? (value) {
+                                    setState(() {
+                                      widget.medication.isRecurring = value;
+                                    });
+                                  }
+                                : null,
+                          ),
+                        ],
+                      ),
+
+                      // Notify Me toggle
+                      Row(
+                        children: [
+                          Text("Notify Me  ", style: Theme.of(context).textTheme.titleMedium),
+                          Switch(
+                            value: widget.medication.notifsOn,
+                            onChanged: _isEditing
+                                ? (value) async {
+                                    if (value) {
+                                      final TimeOfDay? picked = await showTimePicker(
+                                        context: context,
+                                        initialTime: TimeOfDay.now(),
+                                        initialEntryMode: TimePickerEntryMode.inputOnly,
+                                      );
+
+                                      if (picked != null) {
+                                        setState(() {
+                                          widget.medication.notifsOn = true;
+
+                                          // Ensure a notification object exists
+                                          widget.medication.notification ??= medNotification(
+                                            genericName: widget.medication.genericName,
+                                            message: 'Time to take ${widget.medication.genericName}!', // TODO: EDIT
+                                          );
+
+                                          widget.medication.notification!.time = picked;
+                                        });
+
+                                        if (widget.medication.isRecurring) {
+                                          await scheduleRecurringIOSNotification(widget.medication);
+                                        } else {
+                                          await scheduleMedicationNotification(widget.medication);
+                                        }
+
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Notification scheduled')),
+                                        );
+                                      }
+                                    } else {
+                                      setState(() {
+                                        widget.medication.notifsOn = false;
+                                      });
+                                      // Optionally cancel existing notification
+                                      await flutterLocalNotificationsPlugin.cancel(widget.medication.id.hashCode);
+                                      for (int i = 0; i < 7; i++) {
+                                        await flutterLocalNotificationsPlugin.cancel(widget.medication.id.hashCode + i);
+                                      }
+                                    }
+                                  }
+                                : null,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
 
                     const SizedBox(height: 16),
 
