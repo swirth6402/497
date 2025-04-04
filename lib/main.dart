@@ -42,7 +42,7 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => MyAppState(),
       child: MaterialApp(
-        title: 'medmanage',
+        title: 'medchecker',
         theme: ThemeData(  // THIS IS WHERE THE THEME IS CREATED
           fontFamily: GoogleFonts.inter().fontFamily,
           useMaterial3: true,
@@ -1010,7 +1010,7 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
               'Results may not be up to date or may vary. Use with caution.',
               style: TextStyle(fontSize: 12, color: Colors.red),
               textAlign: TextAlign.center,
-            ),
+            ),    
           ),
         ],
       ),
