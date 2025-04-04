@@ -1,0 +1,12 @@
+specVersion: "v1"
+serviceId: "medmanage"
+location: "northamerica-northeast1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "fdcdb"
+      cloudSql:
+        instanceId: "medmanage-fdc"
+      # schemaValidation: "COMPATIBLE"
+connectorDirs: ["./connector"]

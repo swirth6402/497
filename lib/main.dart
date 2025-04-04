@@ -60,9 +60,40 @@ class MyApp extends StatelessWidget {
             )
           )
         ),
-        home: const MainPageView(), 
+        home: NotificationInitializer(
+          child: const MainPageView(),
+        ),
+
       ),
     );
+  }
+}
+
+// *********************** Notification Initialized **********************************
+class NotificationInitializer extends StatefulWidget {
+  final Widget child;
+  const NotificationInitializer({super.key, required this.child});
+
+  @override
+  State<NotificationInitializer> createState() => _NotificationInitializerState();
+}
+
+class _NotificationInitializerState extends State<NotificationInitializer> {
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      final appState = context.read<MyAppState>();
+      checkAndRescheduleNotifications(appState.items.map((item) => item.medication).toList());
+      _initialized = true;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }
 
@@ -70,9 +101,9 @@ class MyApp extends StatelessWidget {
 // added this to make pages swipable/more easily navigatable 
 class MainPageView extends StatefulWidget {
   const MainPageView({super.key});
-
   @override
   MainPageViewState createState() => MainPageViewState();
+  
 }
 
 class MainPageViewState extends State<MainPageView> {
@@ -102,6 +133,7 @@ class MainPageViewState extends State<MainPageView> {
   void _onPageChanged(int index) {
     setState(() {
       _currentPageIndex = index;
+      
     });
   }
 
@@ -348,15 +380,14 @@ class MyHomePage extends State<HomePage> {
             ),
           ),
         
-          const Divider(height: 32.0),
+          // const Divider(height: 32.0),
           
-          ElevatedButton(
-            
-            onPressed: () async {
-              await showSimpleNotification();
-            },
-            child: const Text('Show Notification'),
-          )
+          // ElevatedButton(
+          //   onPressed: () async {
+          //     await showSimpleNotification();
+          //   },
+          //   child: const Text('Show Notification'),
+          // )
         ],
       ),
     );
@@ -782,10 +813,7 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
     super.initState();
     final appState = Provider.of<MyAppState>(context, listen: false);
     _selectedItems = widget.selectedInteraction ?? List.from(appState.interactionItems);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-        final appState = context.read<MyAppState>();
-        rescheduleAllRecurringNotifications(appState.items.map((i) => i.medication).toList());
-  });
+
   }
 
 

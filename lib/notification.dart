@@ -117,6 +117,16 @@ Future<void> showSimpleNotification() async {
    print("made it here 4");
 }
 
+DateTime? _lastScheduledDate;
+
+void checkAndRescheduleNotifications(List<Medication> meds) {
+  final today = DateTime.now();
+  if (_lastScheduledDate == null || _lastScheduledDate!.day != today.day) {
+    rescheduleAllRecurringNotifications(meds);
+    _lastScheduledDate = today;
+  }
+}
+
 void rescheduleAllRecurringNotifications(List<Medication> meds) {
   for (var med in meds) {
     scheduleRecurringIOSNotification(med);
@@ -171,48 +181,41 @@ Future<void> scheduleRecurringIOSNotification(Medication medication) async {
   final notif = medication.notification;
   if (notif == null || notif.time == null || !medication.notifsOn || !medication.isRecurring) return;
 
-  final now = DateTime.now();
   final time = notif.time!;
-  final todayIndex = now.weekday % 7; // 0 = Sunday
+  final now = tz.TZDateTime.now(tz.local);
 
-  // Find the next day the med is taken
-  int? nextDayOffset;
   for (int i = 0; i < 7; i++) {
-    int checkDay = (todayIndex + i) % 7;
-    if (medication.daysUsed[checkDay]) {
-      nextDayOffset = i;
-      break;
-    }
-  }
+    if (!medication.daysUsed[i]) continue;
 
-  if (nextDayOffset == null) return; // No valid days selected
+    // Calculate next date for each selected weekday
+    final dayDifference = (i - now.weekday % 7 + 7) % 7;
+    final scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day + dayDifference,
+      time.hour,
+      time.minute,
+    );
 
-  final scheduledDate = DateTime(
-    now.year,
-    now.month,
-    now.day + nextDayOffset,
-    time.hour,
-    time.minute,
-  );
-
-  final delay = scheduledDate.difference(now);
-
-  Timer(delay, () {
-    flutterLocalNotificationsPlugin.show(
-      medication.id.hashCode,
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      medication.id.hashCode + i, // unique per day
       'Medication Reminder',
       '${medication.genericName} - ${medication.dosage ?? ''}mg',
+       _nextInstanceOfTime(time),
       const NotificationDetails(
         iOS: DarwinNotificationDetails(
           presentAlert: true,
-          presentBadge: true,
           presentSound: true,
+          presentBadge: true,
         ),
       ),
-      payload: 'medication_reminder',
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime, 
     );
-  });
+  }
 }
+
 
 
 
