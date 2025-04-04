@@ -14,58 +14,53 @@ import 'notification.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 
-
-// initalize list of children 
+// initalize list of children
 List<Child> children = [];
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-   await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await initializeNotifications((NotificationResponse response) {
     debugPrint('Notification tapped with payload: ${response.payload}');
     // add things here
   });
- 
+
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (context) => MyAppState(),
       child: MaterialApp(
-        title: 'medmanage',
-        theme: ThemeData(  // THIS IS WHERE THE THEME IS CREATED
+        title: 'medchecker',
+        theme: ThemeData(
+          // THIS IS WHERE THE THEME IS CREATED
           fontFamily: GoogleFonts.inter().fontFamily,
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color.fromARGB(255, 118, 196, 255)
-            
-            ),
+            seedColor: const Color.fromARGB(255, 118, 196, 255),
+          ),
           textTheme: TextTheme(
             displayLarge: const TextStyle(
               fontSize: 40,
               fontWeight: FontWeight.bold,
             ),
-            titleLarge: GoogleFonts.inter(
-
-            )
-          )
+            titleLarge: GoogleFonts.inter(),
+          ),
         ),
-        home: const MainPageView(), 
+        home: const MainPageView(),
       ),
     );
   }
 }
 
 // *********************** PageView Controller *******************************************
-// added this to make pages swipable/more easily navigatable 
+// added this to make pages swipable/more easily navigatable
 class MainPageView extends StatefulWidget {
   const MainPageView({super.key});
 
@@ -76,14 +71,14 @@ class MainPageView extends StatefulWidget {
 class MainPageViewState extends State<MainPageView> {
   final PageController _pageController = PageController(initialPage: 0);
   int _currentPageIndex = 0;
-  
+
   final List<Widget> _pages = [
     DosageCalculatorPage(),
     const HomePage(),
     const MedicationLookup(),
     InteractionChecker(),
   ];
-  
+
   final List<String> _pageTitles = [
     'Dosage Calculator',
     'Home',
@@ -106,9 +101,7 @@ class MainPageViewState extends State<MainPageView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_pageTitles[_currentPageIndex]),
-      ),
+      appBar: AppBar(title: Text(_pageTitles[_currentPageIndex])),
       body: PageView(
         controller: _pageController,
         onPageChanged: _onPageChanged,
@@ -125,14 +118,8 @@ class MainPageViewState extends State<MainPageView> {
           );
         },
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calculate),
-            label: 'Dosage',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.calculate), label: 'Dosage'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
             icon: Icon(Icons.search),
             label: 'Medications',
@@ -147,100 +134,103 @@ class MainPageViewState extends State<MainPageView> {
   }
 }
 
-
 // *************************** HOME PAGE *********************************************
 class HomePage extends StatefulWidget {
-
-  
-  const HomePage ({super.key});
+  const HomePage({super.key});
 
   @override
   MyHomePage createState() => MyHomePage();
-  
 }
 
 class MyHomePage extends State<HomePage> {
   final TextEditingController newItemController = TextEditingController();
   final TextEditingController searchController = TextEditingController();
-   DateTime _selectedDate = DateTime.now();
+  DateTime _selectedDate = DateTime.now();
 
   void _showAddChildDialog(BuildContext context) {
-  final nameController = TextEditingController();
-  final ageController = TextEditingController();
-  final weightController = TextEditingController();
+    final nameController = TextEditingController();
+    final ageController = TextEditingController();
+    final weightController = TextEditingController();
 
-  void onDidReceiveNotificationResponse(NotificationResponse notificationResponse) async {
-    final String? payload = notificationResponse.payload;
-    if (notificationResponse.payload != null) {
-      debugPrint('notification payload: $payload');
+    void onDidReceiveNotificationResponse(
+      NotificationResponse notificationResponse,
+    ) async {
+      final String? payload = notificationResponse.payload;
+      if (notificationResponse.payload != null) {
+        debugPrint('notification payload: $payload');
+      }
+      await Navigator.push(
+        context,
+        MaterialPageRoute<void>(builder: (context) => MedicationLookup()),
+      );
     }
-    await Navigator.push(
-      context,
-      MaterialPageRoute<void>(builder: (context) => MedicationLookup()),
-    );
-}
- 
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text("Add Child"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: "Child Name"),
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Add Child"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: "Child Name"),
+              ),
+              TextField(
+                controller: ageController,
+                decoration: const InputDecoration(labelText: "Child Age"),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                controller: weightController,
+                decoration: const InputDecoration(
+                  labelText: "Child Weight (lbs)",
+                ),
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("Cancel"),
             ),
-            TextField(
-              controller: ageController,
-              decoration: const InputDecoration(labelText: "Child Age"),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: weightController,
-              decoration: const InputDecoration(labelText: "Child Weight (lbs)"),
-              keyboardType: TextInputType.number,
+            ElevatedButton(
+              onPressed: () {
+                final name = nameController.text.trim();
+                final age = int.tryParse(ageController.text);
+                final weight = int.tryParse(weightController.text);
+                if (name.isNotEmpty && age != null && weight != null) {
+                  setState(() {
+                    children.add(
+                      Child(
+                        childName: name,
+                        childAge: age,
+                        childWeight: weight,
+                      ),
+                    );
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text("Add"),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-              final age = int.tryParse(ageController.text);
-              final weight = int.tryParse(weightController.text);
-              if (name.isNotEmpty && age != null && weight != null) {
-                setState(() {
-                  children.add(
-                    Child(childName: name, childAge: age, childWeight: weight),
-                  );
-                });
-                Navigator.pop(context);
-              }
-            },
-            child: const Text("Add"),
-          ),
-        ],
-      );
-    },
-  );
-}
-
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
-    final filteredItems = appState.items
-        .where((item) => item.isScheduledForDate(_selectedDate))
-        .toList();
+    final filteredItems =
+        appState.items
+            .where((item) => item.isScheduledForDate(_selectedDate))
+            .toList();
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -277,22 +267,23 @@ class MyHomePage extends State<HomePage> {
                   const SizedBox(height: 8.0),
                   children.isEmpty
                       ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8.0),
-                          child: Text("No children added yet."),
-                        )
+                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        child: Text("No children added yet."),
+                      )
                       : ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: children.length,
-                          itemBuilder: (context, index) {
-                            final child = children[index];
-                            return ListTile(
-                              title: Text(child.childName),
-                              subtitle: Text(
-                                  "Age: ${child.childAge} | Weight: ${child.childWeight} lbs"),
-                            );
-                          },
-                        ),
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: children.length,
+                        itemBuilder: (context, index) {
+                          final child = children[index];
+                          return ListTile(
+                            title: Text(child.childName),
+                            subtitle: Text(
+                              "Age: ${child.childAge} | Weight: ${child.childWeight} lbs",
+                            ),
+                          );
+                        },
+                      ),
                   const Divider(height: 32.0),
                   // ********** Medication Checklist Section **********
                   Text(
@@ -301,45 +292,47 @@ class MyHomePage extends State<HomePage> {
                   ),
                   filteredItems.isEmpty
                       ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16.0),
-                          child: Text("No medications scheduled for this day."),
-                        )
+                        padding: EdgeInsets.symmetric(vertical: 16.0),
+                        child: Text("No medications scheduled for this day."),
+                      )
                       : ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: filteredItems.length,
-                          itemBuilder: (context, index) {
-                            final item = filteredItems[index];
-                            return CheckboxListTile(
-                              title: GestureDetector(
-                                onTap: () {
-                                  if (item.medication != null) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            MedicationDescriptionPage(
-                                                medication: item.medication),
-                                      ),
-                                    );
-                                  }
-                                },
-                                child: Text(item.medication.genericName),
-                              ),
-                              subtitle: Text(
-                                (item.medication.child != null)
-                                    ? (item.medication.isRecurring
-                                        ? "${item.medication.child!.childName} - Recurring on ${recurringDaysText(item.medication.daysUsed)}"
-                                        : item.medication.child!.childName)
-                                    : "No child assigned",
-                              ),
-                              value: item.isChecked,
-                              onChanged: (bool? value) {
-                                appState.toggleChecked(item);
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: filteredItems.length,
+                        itemBuilder: (context, index) {
+                          final item = filteredItems[index];
+                          return CheckboxListTile(
+                            title: GestureDetector(
+                              onTap: () {
+                                if (item.medication != null) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) =>
+                                              MedicationDescriptionPage(
+                                                medication: item.medication,
+                                              ),
+                                    ),
+                                  );
+                                }
                               },
-                            );
-                          },
-                        ),
+                              child: Text(item.medication.genericName),
+                            ),
+                            subtitle: Text(
+                              (item.medication.child != null)
+                                  ? (item.medication.isRecurring
+                                      ? "${item.medication.child!.childName} - Recurring on ${recurringDaysText(item.medication.daysUsed)}"
+                                      : item.medication.child!.childName)
+                                  : "No child assigned",
+                            ),
+                            value: item.isChecked,
+                            onChanged: (bool? value) {
+                              appState.toggleChecked(item);
+                            },
+                          );
+                        },
+                      ),
                 ],
               ),
             ),
@@ -349,13 +342,14 @@ class MyHomePage extends State<HomePage> {
                 await showSimpleNotification();
               },
               child: const Text('Show Notification'),
-            )
+            ),
           ],
         ),
       ),
     );
   }
 }
+
 class MyAppState extends ChangeNotifier {
   // List of medications and their checked state
   List<Item> items = [];
@@ -366,7 +360,7 @@ class MyAppState extends ChangeNotifier {
     item.isChecked = !item.isChecked;
     notifyListeners();
   }
-  
+
   // Method to add a new item to the list
   void addItem(Item item) {
     items.add(item);
@@ -384,11 +378,12 @@ class MyAppState extends ChangeNotifier {
       notifyListeners();
     }
   }
+
   void removeFromInteractionCheck(Item item) {
     interactionItems.remove(item);
     notifyListeners();
   }
-  
+
   void clearInteractionCheck() {
     interactionItems.clear();
     notifyListeners();
@@ -403,9 +398,8 @@ class MyAppState extends ChangeNotifier {
         break;
       }
     }
+  }
 }
-}
-
 
 // A class to represent each item in the list (word pair + checked state)
 class Item {
@@ -414,14 +408,13 @@ class Item {
 
   Item(this.medication, this.isChecked);
   bool isScheduledForDate(DateTime date) {
-
     // If it is recurring, check if it's scheduled for the day of the week
     final dayIndex = date.weekday % 7; // Convert to 0-6 range where 0 is Sunday
     return medication.daysUsed[dayIndex];
   }
 }
 
-// helper function for recurring/days/etc 
+// helper function for recurring/days/etc
 String recurringDaysText(List<bool> days) {
   const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   final selected = <String>[];
@@ -429,7 +422,7 @@ String recurringDaysText(List<bool> days) {
     if (days[i]) selected.add(dayLabels[i]);
   }
   return selected.isEmpty ? 'Not recurring' : selected.join(', ');
-}  
+}
 
 // ***************************** MEDICATION LOOKUP *********************************************
 
@@ -479,12 +472,13 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                           selectedChild = child;
                         });
                       },
-                      items: children.map((child) {
-                        return DropdownMenuItem<Child>(
-                          value: child,
-                          child: Text(child.childName),
-                        );
-                      }).toList(),
+                      items:
+                          children.map((child) {
+                            return DropdownMenuItem<Child>(
+                              value: child,
+                              child: Text(child.childName),
+                            );
+                          }).toList(),
                     ),
                     const SizedBox(height: 16),
                     const Text("Select Days of Use:"),
@@ -540,10 +534,12 @@ class MyMedicationLookupState extends State<MedicationLookup> {
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
-    final selectedItems = appState.items.where((item) => item.isChecked).toList();
+    final selectedItems =
+        appState.items.where((item) => item.isChecked).toList();
 
     return Scaffold(
-      body: SingleChildScrollView( // Added SingleChildScrollView here
+      body: SingleChildScrollView(
+        // Added SingleChildScrollView here
         child: Column(
           children: [
             // Search Section
@@ -573,9 +569,10 @@ class MyMedicationLookupState extends State<MedicationLookup> {
             ),
             // FutureBuilder to display search results based on the search query
             FutureBuilder<List<Medication>>(
-              future: searchController.text.isEmpty
-                  ? Future.value([])
-                  : _searchMedications(searchController.text),
+              future:
+                  searchController.text.isEmpty
+                      ? Future.value([])
+                      : _searchMedications(searchController.text),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const CircularProgressIndicator();
@@ -586,79 +583,79 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                   return _searchResults.isEmpty
                       ? const SizedBox.shrink()
                       : ListView.builder(
-                          shrinkWrap: true,
-                          physics: NeverScrollableScrollPhysics(),
-                          itemCount: _searchResults.length,
-                            itemBuilder: (context, index) {
-                              final med = _searchResults[index];
-                              return ListTile(
-                                title: GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            MedicationDescriptionPage(
-                                                medication: med),
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: _searchResults.length,
+                        itemBuilder: (context, index) {
+                          final med = _searchResults[index];
+                          return ListTile(
+                            title: GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => MedicationDescriptionPage(
+                                          medication: med,
+                                        ),
+                                  ),
+                                );
+                              },
+                              child: Text(med.genericName),
+                            ),
+                            subtitle: Text(med.description),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.compare_arrows,
+                                    color: Colors.blue,
+                                  ),
+                                  tooltip: 'Add to Interaction Checker',
+                                  onPressed: () {
+                                    Item newItem = Item(med, false);
+                                    appState.addToInteractionCheck(newItem);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          '${med.genericName} added to interaction checker',
+                                        ),
+                                        duration: const Duration(seconds: 2),
                                       ),
                                     );
                                   },
-                                  child: Text(med.genericName),
                                 ),
-                                subtitle: Text(med.description),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.compare_arrows,
-                                          color: Colors.blue),
-                                      tooltip: 'Add to Interaction Checker',
-                                      onPressed: () {
-                                        Item newItem = Item(med, false);
-                                        appState.addToInteractionCheck(newItem);
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                                '${med.genericName} added to interaction checker'),
-                                            duration:
-                                                const Duration(seconds: 2),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                    TextButton(
-                                      child: const Text("Add"),
-                                      onPressed: () async {
-                                        final result =
-                                            await _showSelectChildDialog(context);
-                                        if (result != null) {
-                                          Child? child = result['child'];
-                                          List<bool> days = result['days'];
-                                          bool isRecurring =
-                                              result['isRecurring'];
+                                TextButton(
+                                  child: const Text("Add"),
+                                  onPressed: () async {
+                                    final result = await _showSelectChildDialog(
+                                      context,
+                                    );
+                                    if (result != null) {
+                                      Child? child = result['child'];
+                                      List<bool> days = result['days'];
+                                      bool isRecurring = result['isRecurring'];
 
-                                          med.child = child;
-                                          med.daysUsed = days;
-                                          med.isRecurring = isRecurring;
+                                      med.child = child;
+                                      med.daysUsed = days;
+                                      med.isRecurring = isRecurring;
 
-                                          appState.addItem(Item(med, false));
-                                        }
-                                      },
-                                    ),
-                                  ],
+                                      appState.addItem(Item(med, false));
+                                    }
+                                  },
                                 ),
-                              );
-                            },
+                              ],
+                            ),
                           );
+                        },
+                      );
                 }
               },
             ),
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Column(
-                children: [],
-              ),
+              child: Column(children: []),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -672,8 +669,10 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          InteractionChecker(selectedInteraction: selectedItems),
+                      builder:
+                          (context) => InteractionChecker(
+                            selectedInteraction: selectedItems,
+                          ),
                     ),
                   );
                 },
@@ -686,10 +685,8 @@ class MyMedicationLookupState extends State<MedicationLookup> {
   }
 }
 
-
 // ***************************** INTERACTION CHECKER *********************************
 class InteractionChecker extends StatefulWidget {
-
   final List<Item>? selectedInteraction;
   InteractionChecker({super.key, this.selectedInteraction});
 
@@ -705,15 +702,14 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
   String _interactionResult = '';
   bool _isLoading = false; // Add a loading state variable
 
-
   // logic for adding items to interaction checker
   @override
   void initState() {
     super.initState();
     final appState = Provider.of<MyAppState>(context, listen: false);
-    _selectedItems = widget.selectedInteraction ?? List.from(appState.interactionItems);
+    _selectedItems =
+        widget.selectedInteraction ?? List.from(appState.interactionItems);
   }
-
 
   // interaction checker helper function
   Future<String> _checkInteractions(List<Item> selectedItems) async {
@@ -724,12 +720,14 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
     if (selectedItems.length != 2) {
       setState(() {
         _isLoading = false; // Set loading to false if there's an error
-        _interactionResult= 'Please select exactly two medications to check for interactions.';
+        _interactionResult =
+            'Please select exactly two medications to check for interactions.';
       });
       return _interactionResult;
     }
 
-    final apiKey = 'AIzaSyBVUMrM4mMygy7ogEskMJQUfkYTC6buA4g'; // Got this from: https://docs.flutter.dev/ai-toolkit Gemini AI configuration
+    final apiKey =
+        'AIzaSyBVUMrM4mMygy7ogEskMJQUfkYTC6buA4g'; // Got this from: https://docs.flutter.dev/ai-toolkit Gemini AI configuration
     final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
 
     final medication1 = selectedItems[0].medication.genericName;
@@ -741,11 +739,10 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
       final result = response.text ?? 'No response from AI.';
 
       setState(() {
-      _interactionResult = result;
-      _isLoading = false; // Hide loading indicator
-      
-    });
-    return result;
+        _interactionResult = result;
+        _isLoading = false; // Hide loading indicator
+      });
+      return result;
     } catch (e) {
       setState(() {
         _interactionResult = 'Error checking interactions: $e';
@@ -759,15 +756,14 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
     // Use items from appState.interactionItems if available
-    List<Item> displayItems = appState.interactionItems.isNotEmpty ? 
-                            appState.interactionItems : 
-                            _selectedItems;
-    
+    List<Item> displayItems =
+        appState.interactionItems.isNotEmpty
+            ? appState.interactionItems
+            : _selectedItems;
+
     return Scaffold(
       body: Column(
         children: [
-          
-          
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
@@ -775,7 +771,7 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
               style: TextStyle(fontSize: 16),
             ),
           ),
-          
+
           const Divider(height: 32.0),
 
           Padding(
@@ -789,20 +785,23 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
                 ),
                 const SizedBox(height: 8),
                 displayItems.isEmpty
-                  ? const Text('No medications selected. Add medications using the compare button or from your list below.')
-                  : Wrap(
+                    ? const Text(
+                      'No medications selected. Add medications using the compare button or from your list below.',
+                    )
+                    : Wrap(
                       spacing: 8.0,
-                      children: displayItems.map((item) {
-                        return Chip(
-                          label: Text(item.medication.genericName),
-                          onDeleted: () {
-                            appState.removeFromInteractionCheck(item);
-                            setState(() {
-                              _selectedItems.remove(item);
-                            });
-                          },
-                        );
-                      }).toList(),
+                      children:
+                          displayItems.map((item) {
+                            return Chip(
+                              label: Text(item.medication.genericName),
+                              onDeleted: () {
+                                appState.removeFromInteractionCheck(item);
+                                setState(() {
+                                  _selectedItems.remove(item);
+                                });
+                              },
+                            );
+                          }).toList(),
                     ),
               ],
             ),
@@ -819,7 +818,10 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
                     padding: const EdgeInsets.all(16.0),
                     child: Text(
                       'Add From Your Medications:',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   Expanded(
@@ -828,28 +830,31 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
                       itemBuilder: (context, index) {
                         final item = appState.items[index];
                         bool isSelected = displayItems.contains(item);
-                        
+
                         return ListTile(
                           title: Text(item.medication.genericName),
                           subtitle: Text(item.medication.description),
                           trailing: IconButton(
                             icon: Icon(
-                              isSelected ? Icons.check_circle : Icons.add_circle_outline,
+                              isSelected
+                                  ? Icons.check_circle
+                                  : Icons.add_circle_outline,
                               color: isSelected ? Colors.green : Colors.blue,
                             ),
-                            onPressed: isSelected
-                                ? () {
-                                    appState.removeFromInteractionCheck(item);
-                                    setState(() {
-                                      _selectedItems.remove(item);
-                                    });
-                                  }
-                                : () {
-                                    appState.addToInteractionCheck(item);
-                                    setState(() {
-                                      _selectedItems.add(item);
-                                    });
-                                  },
+                            onPressed:
+                                isSelected
+                                    ? () {
+                                      appState.removeFromInteractionCheck(item);
+                                      setState(() {
+                                        _selectedItems.remove(item);
+                                      });
+                                    }
+                                    : () {
+                                      appState.addToInteractionCheck(item);
+                                      setState(() {
+                                        _selectedItems.add(item);
+                                      });
+                                    },
                           ),
                         );
                       },
@@ -877,7 +882,10 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
             const CircularProgressIndicator()
           else if (_interactionResult.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+              padding: const EdgeInsets.symmetric(
+                vertical: 16.0,
+                horizontal: 16.0,
+              ),
               child: Column(
                 children: [
                   Text(
@@ -889,13 +897,21 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
                   if (_interactionResult.toLowerCase().contains("yes"))
                     Text(
                       "Compatible",
-                      style: TextStyle(color: Colors.green, fontSize: 18, fontWeight: FontWeight.bold)
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     )
                   else if (_interactionResult.toLowerCase().contains("no"))
                     Text(
                       "Incompatible",
-                      style: TextStyle(color: Colors.red, fontSize: 18, fontWeight: FontWeight.bold)
-                    )
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -936,39 +952,44 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
     final weight = double.tryParse(_weightController.text);
     final adultDosage = double.tryParse(_adultDosageController.text);
 
-    if (weight != null && adultDosage != null && weight > 0 && adultDosage > 0) {
+    if (weight != null &&
+        adultDosage != null &&
+        weight > 0 &&
+        adultDosage > 0) {
       final dosage = (weight / 150) * adultDosage;
       setState(() {
-        _result = 'The correct dosage for the child is: ${dosage.toStringAsFixed(2)} mg';
+        _result =
+            'The correct dosage for the child is: ${dosage.toStringAsFixed(2)} mg';
       });
       if (_selectedMedication != null) {
-      // Get app state and update the medication
-      var appState = Provider.of<MyAppState>(context, listen: false);
-      appState.updateMedicationDosage(_selectedMedication!, dosage);
-      
+        // Get app state and update the medication
+        var appState = Provider.of<MyAppState>(context, listen: false);
+        appState.updateMedicationDosage(_selectedMedication!, dosage);
+
+        setState(() {
+          _result += '\nDosage saved to ${_selectedMedication!.genericName}';
+        });
+      }
+    } else {
       setState(() {
-        _result += '\nDosage saved to ${_selectedMedication!.genericName}';
+        _result = 'Please enter valid weight (lbs) and adult dosage(mg).';
       });
     }
-  } else {
-    setState(() {
-      _result = 'Please enter valid weight (lbs) and adult dosage(mg).';
-    });
-  }
-    
   }
 
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
-    List<Medication> medications = appState.items.map((item) => item.medication).toList();
+    List<Medication> medications =
+        appState.items.map((item) => item.medication).toList();
 
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: ListView( // Use ListView for scrollability on small screens
+          child: ListView(
+            // Use ListView for scrollability on small screens
             children: [
               Text(
                 'Select a child, or enter the weight of the child in pounds. Then, enter the adult dosage in mg:',
@@ -990,17 +1011,19 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
                       hint: const Text("Select a child"),
                       value: _selectedChild,
                       isExpanded: true,
-                      items: children.map((child) {
-                        return DropdownMenuItem<Child>(
-                          value: child,
-                          child: Text(child.childName),
-                        );
-                      }).toList(),
+                      items:
+                          children.map((child) {
+                            return DropdownMenuItem<Child>(
+                              value: child,
+                              child: Text(child.childName),
+                            );
+                          }).toList(),
                       onChanged: (Child? child) {
                         setState(() {
                           _selectedChild = child;
                           if (child != null) {
-                            _weightController.text = child.childWeight.toString();
+                            _weightController.text =
+                                child.childWeight.toString();
                           }
                         });
                       },
@@ -1020,26 +1043,28 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
                 hint: const Text("Select a Medication"),
                 value: _selectedMedication,
                 isExpanded: true,
-                items: medications.isEmpty
-                    ? [
-                        DropdownMenuItem<Medication>(
-                          value: null,
-                          child: Text("No medications available"),
-                        )
-                      ]
-                    : medications.map((medication) {
-                        return DropdownMenuItem<Medication>(
-                          value: medication,
-                          child: Text(medication.genericName),
-                        );
-                      }).toList(),
-                onChanged: medications.isEmpty
-                    ? null
-                    : (Medication? medication) {
-                        setState(() {
-                          _selectedMedication = medication;
-                        });
-                      },
+                items:
+                    medications.isEmpty
+                        ? [
+                          DropdownMenuItem<Medication>(
+                            value: null,
+                            child: Text("No medications available"),
+                          ),
+                        ]
+                        : medications.map((medication) {
+                          return DropdownMenuItem<Medication>(
+                            value: medication,
+                            child: Text(medication.genericName),
+                          );
+                        }).toList(),
+                onChanged:
+                    medications.isEmpty
+                        ? null
+                        : (Medication? medication) {
+                          setState(() {
+                            _selectedMedication = medication;
+                          });
+                        },
               ),
 
               const SizedBox(height: 20),
@@ -1105,35 +1130,35 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
   }
 }
 
-
 // ***************************** MEDICATION DESCRIPTION (clickable via Medication LookUp) *********************************
-  class MedicationDescriptionPage extends StatefulWidget {
-    final Medication medication;
-    const MedicationDescriptionPage({super.key, required this.medication});
-    @override
-    MedicationDescriptionState createState() => MedicationDescriptionState();
+class MedicationDescriptionPage extends StatefulWidget {
+  final Medication medication;
+  const MedicationDescriptionPage({super.key, required this.medication});
+  @override
+  MedicationDescriptionState createState() => MedicationDescriptionState();
+}
+
+class MedicationDescriptionState extends State<MedicationDescriptionPage> {
+  String _aiGeneratedDescription = '';
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _generateDescription();
   }
-  class MedicationDescriptionState extends State<MedicationDescriptionPage> {
-    String _aiGeneratedDescription = '';
-    bool _isLoading = false;
 
-
-    @override
-    void initState() {
-      super.initState();
-      _generateDescription();
-    }
-
-    Future<void> _generateDescription() async {
-        setState(() {
-        _isLoading = true;
-        _aiGeneratedDescription = '';
+  Future<void> _generateDescription() async {
+    setState(() {
+      _isLoading = true;
+      _aiGeneratedDescription = '';
     });
 
     final apiKey = 'AIzaSyBYOnoU40by4erAfWuRbPezXIVR_pCHQBM';
     final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
 
-    final prompt = 'Describe the medication ${widget.medication.genericName} for users in a paragraph. 50 words';
+    final prompt =
+        'Describe the medication ${widget.medication.genericName} for users in a paragraph. 50 words';
 
     try {
       final response = await model.generateContent([Content.text(prompt)]);
@@ -1151,12 +1176,10 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
     }
   }
 
- @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Medication Description'),
-      ),
+      appBar: AppBar(title: const Text('Medication Description')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -1164,10 +1187,7 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
           children: [
             Text(
               widget.medication.genericName,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             if (_isLoading)
@@ -1176,7 +1196,9 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
               Text(
                 _aiGeneratedDescription.isNotEmpty
                     ? _aiGeneratedDescription
-                    : widget.medication.description, // Fallback to provided description
+                    : widget
+                        .medication
+                        .description, // Fallback to provided description
                 style: const TextStyle(fontSize: 16),
               ),
             const SizedBox(height: 16),
