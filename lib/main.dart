@@ -40,17 +40,51 @@ class MyApp extends StatelessWidget {
         title: 'medchecker',
         theme: ThemeData(
           // THIS IS WHERE THE THEME IS CREATED
-          fontFamily: GoogleFonts.inter().fontFamily,
           useMaterial3: true,
+          fontFamily: GoogleFonts.inter().fontFamily,
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color.fromARGB(255, 118, 196, 255),
+            seedColor: const Color(0xFF76C4FF),
+            brightness: Brightness.light,
           ),
-          textTheme: TextTheme(
+          checkboxTheme: CheckboxThemeData(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+            ),
+            side: const BorderSide(color: Colors.black54, width: 1.5),
+            fillColor: MaterialStateProperty.resolveWith((states) {
+              if (states.contains(MaterialState.selected)) {
+                return const Color(0xFF008000); // ✅ green when checked
+              }
+              return Colors.white; // ❎ white when unchecked
+            }),
+            checkColor: MaterialStateProperty.all(
+              Colors.white,
+            ), // ✅ white checkmark
+          ),
+
+          textTheme: GoogleFonts.interTextTheme().copyWith(
             displayLarge: const TextStyle(
-              fontSize: 40,
+              fontSize: 36,
               fontWeight: FontWeight.bold,
             ),
-            titleLarge: GoogleFonts.inter(),
+            titleLarge: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+            bodyMedium: const TextStyle(fontSize: 16),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+          ),
+          inputDecorationTheme: const InputDecorationTheme(
+            border: OutlineInputBorder(),
+            filled: true,
+            fillColor: Color(0xFFF0F4F8),
           ),
         ),
         home: const MainPageView(),
@@ -177,11 +211,13 @@ class MyHomePage extends State<HomePage> {
                 controller: nameController,
                 decoration: const InputDecoration(labelText: "Child Name"),
               ),
+              const SizedBox(height: 12),
               TextField(
                 controller: ageController,
                 decoration: const InputDecoration(labelText: "Child Age"),
                 keyboardType: TextInputType.number,
               ),
+              const SizedBox(height: 12),
               TextField(
                 controller: weightController,
                 decoration: const InputDecoration(
@@ -236,18 +272,24 @@ class MyHomePage extends State<HomePage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            EasyDateTimeLinePicker(
-              focusedDate: _selectedDate,
-              firstDate: DateTime(2024, 3, 18),
-              lastDate: DateTime(2030, 3, 18),
-              onDateChange: (date) {
+            EasyDateTimeLine(
+              initialDate: _selectedDate,
+              onDateChange: (selectedDate) {
                 setState(() {
-                  _selectedDate = date;
+                  _selectedDate = selectedDate;
                 });
               },
+              activeColor: const Color(0xFFFFC0CB), // Pink for selected day
+              dayProps: const EasyDayProps(
+                height: 70,
+                width: 55,
+                dayStructure: DayStructure.dayStrDayNum,
+                // backgroundColor: Color(0xFFADD8E6), // Light blue for all days
+              ),
             ),
+
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(15),
               child: Column(
                 children: [
                   // Children
@@ -286,10 +328,14 @@ class MyHomePage extends State<HomePage> {
                       ),
                   const Divider(height: 32.0),
                   // ********** Medication Checklist Section **********
-                  Text(
-                    "Medications Needed  ${_selectedDate.month}/${_selectedDate.day} ",
-                    style: Theme.of(context).textTheme.titleLarge,
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
+                    child: Text(
+                      "Medications Needed  ${_selectedDate.month}/${_selectedDate.day} ",
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                   ),
+
                   filteredItems.isEmpty
                       ? const Padding(
                         padding: EdgeInsets.symmetric(vertical: 16.0),
@@ -301,10 +347,23 @@ class MyHomePage extends State<HomePage> {
                         itemCount: filteredItems.length,
                         itemBuilder: (context, index) {
                           final item = filteredItems[index];
-                          return CheckboxListTile(
-                            title: GestureDetector(
-                              onTap: () {
-                                if (item.medication != null) {
+                          return Card(
+                            color: const Color(0xFFADD8E6),
+                            margin: const EdgeInsets.symmetric(
+                              vertical: 6,
+                              horizontal: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                            child: CheckboxListTile(
+                              contentPadding: const EdgeInsets.all(16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              title: GestureDetector(
+                                onTap: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -315,21 +374,26 @@ class MyHomePage extends State<HomePage> {
                                               ),
                                     ),
                                   );
-                                }
+                                },
+                                child: Text(
+                                  item.medication.genericName,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                              ),
+
+                              subtitle: Text(
+                                (item.medication.child != null)
+                                    ? (item.medication.isRecurring
+                                        ? "${item.medication.child!.childName} - Recurring on ${recurringDaysText(item.medication.daysUsed)}"
+                                        : item.medication.child!.childName)
+                                    : "No child assigned",
+                              ),
+                              value: item.isChecked,
+                              onChanged: (bool? value) {
+                                appState.toggleChecked(item);
                               },
-                              child: Text(item.medication.genericName),
                             ),
-                            subtitle: Text(
-                              (item.medication.child != null)
-                                  ? (item.medication.isRecurring
-                                      ? "${item.medication.child!.childName} - Recurring on ${recurringDaysText(item.medication.daysUsed)}"
-                                      : item.medication.child!.childName)
-                                  : "No child assigned",
-                            ),
-                            value: item.isChecked,
-                            onChanged: (bool? value) {
-                              appState.toggleChecked(item);
-                            },
                           );
                         },
                       ),
