@@ -53,13 +53,11 @@ class MyApp extends StatelessWidget {
             side: const BorderSide(color: Colors.black54, width: 1.5),
             fillColor: MaterialStateProperty.resolveWith((states) {
               if (states.contains(MaterialState.selected)) {
-                return const Color(0xFF008000); // ✅ green when checked
+                return const Color(0xFF008000);
               }
-              return Colors.white; // ❎ white when unchecked
+              return Colors.white;
             }),
-            checkColor: MaterialStateProperty.all(
-              Colors.white,
-            ), // ✅ white checkmark
+            checkColor: MaterialStateProperty.all(Colors.white),
           ),
 
           textTheme: GoogleFonts.interTextTheme().copyWith(
@@ -87,9 +85,40 @@ class MyApp extends StatelessWidget {
             fillColor: Color(0xFFF0F4F8),
           ),
         ),
-        home: const MainPageView(),
+        home: NotificationInitializer(child: const MainPageView()),
       ),
     );
+  }
+}
+
+// *********************** Notification Initialized **********************************
+class NotificationInitializer extends StatefulWidget {
+  final Widget child;
+  const NotificationInitializer({super.key, required this.child});
+
+  @override
+  State<NotificationInitializer> createState() =>
+      _NotificationInitializerState();
+}
+
+class _NotificationInitializerState extends State<NotificationInitializer> {
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      final appState = context.read<MyAppState>();
+      checkAndRescheduleNotifications(
+        appState.items.map((item) => item.medication).toList(),
+      );
+      _initialized = true;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }
 
@@ -97,7 +126,6 @@ class MyApp extends StatelessWidget {
 // added this to make pages swipable/more easily navigatable
 class MainPageView extends StatefulWidget {
   const MainPageView({super.key});
-
   @override
   MainPageViewState createState() => MainPageViewState();
 }
@@ -107,17 +135,17 @@ class MainPageViewState extends State<MainPageView> {
   int _currentPageIndex = 0;
 
   final List<Widget> _pages = [
-    DosageCalculatorPage(),
     const HomePage(),
     const MedicationLookup(),
     InteractionChecker(),
+    DosageCalculatorPage(),
   ];
 
   final List<String> _pageTitles = [
-    'Dosage Calculator',
     'Home',
     'Medication Lookup',
     'Interaction Checker',
+    'Dosage Calculator',
   ];
 
   @override
@@ -152,7 +180,6 @@ class MainPageViewState extends State<MainPageView> {
           );
         },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.calculate), label: 'Dosage'),
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
             icon: Icon(Icons.search),
@@ -162,6 +189,7 @@ class MainPageViewState extends State<MainPageView> {
             icon: Icon(Icons.swap_horiz_rounded),
             label: 'Interactions',
           ),
+          BottomNavigationBarItem(icon: Icon(Icons.calculate), label: 'Dosage'),
         ],
       ),
     );
@@ -381,12 +409,11 @@ class MyHomePage extends State<HomePage> {
                                       Theme.of(context).textTheme.titleMedium,
                                 ),
                               ),
-
                               subtitle: Text(
-                                (item.medication.child != null)
+                                item.medication.child != null
                                     ? (item.medication.isRecurring
-                                        ? "${item.medication.child!.childName} - Recurring on ${recurringDaysText(item.medication.daysUsed)}"
-                                        : item.medication.child!.childName)
+                                        ? "${item.medication.child!.childName} • ${item.medication.dosage != null ? '${item.medication.dosage}mg • ' : ''}Recurring on ${recurringDaysText(item.medication.daysUsed)}"
+                                        : "${item.medication.child!.childName}${item.medication.dosage != null ? ' • ${item.medication.dosage}mg' : ''}")
                                     : "No child assigned",
                               ),
                               value: item.isChecked,
@@ -400,13 +427,15 @@ class MyHomePage extends State<HomePage> {
                 ],
               ),
             ),
-            const Divider(height: 32.0),
-            ElevatedButton(
-              onPressed: () async {
-                await showSimpleNotification();
-              },
-              child: const Text('Show Notification'),
-            ),
+
+            // const Divider(height: 32.0),
+
+            // ElevatedButton(
+            //   onPressed: () async {
+            //     await showSimpleNotification();
+            //   },
+            //   child: const Text('Show Notification'),
+            // )
           ],
         ),
       ),
@@ -491,7 +520,9 @@ String recurringDaysText(List<bool> days) {
 // ***************************** MEDICATION LOOKUP *********************************************
 
 class MedicationLookup extends StatefulWidget {
-  const MedicationLookup({super.key});
+  const MedicationLookup({
+    super.key,
+  }); // This forwards the key to the StatefulWidget's constructor
 
   @override
   MyMedicationLookupState createState() => MyMedicationLookupState();
@@ -500,21 +531,26 @@ class MedicationLookup extends StatefulWidget {
 class MyMedicationLookupState extends State<MedicationLookup> {
   final TextEditingController newItemController = TextEditingController();
   final TextEditingController searchController = TextEditingController();
-  List<Medication> _searchResults = [];
+  List<Medication> _searchResults = []; // Use a private variable
 
   Future<List<Medication>> _searchMedications(String query) async {
     try {
-      return await searchMedications(query);
+      return await searchMedications(
+        query,
+      ); // calls the searchMedications function from the api_service.dart file
     } catch (e) {
       print('Search error: $e');
-      rethrow;
+      rethrow; // Re-throw the exception to be handled higher up
     }
   }
 
+  // This is the code for the pop up that prompts you to select a child for your medication
   Future<Map<String, dynamic>?> _showSelectChildDialog(BuildContext context) {
     List<bool> selectedDays = List.filled(7, false);
     Child? selectedChild;
     bool selectedIsRecurring = false;
+    bool notifsOn = false;
+    TimeOfDay? selectedTime;
 
     return showDialog<Map<String, dynamic>>(
       context: context,
@@ -528,6 +564,7 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text("Select a Child:"),
+                    // Using a DropdownButton for child selection
                     DropdownButton<Child>(
                       hint: const Text("Select a child"),
                       value: selectedChild,
@@ -553,6 +590,35 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                           selectedDays = days;
                         });
                       },
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Notify Me"),
+                        Switch(
+                          value: notifsOn,
+                          onChanged: (value) async {
+                            if (value) {
+                              final TimeOfDay? picked = await showTimePicker(
+                                context: context,
+                                initialTime: TimeOfDay.now(),
+                                initialEntryMode: TimePickerEntryMode.input,
+                              );
+                              if (picked != null) {
+                                setState(() {
+                                  notifsOn = true;
+                                  selectedTime = picked;
+                                });
+                              }
+                            } else {
+                              setState(() {
+                                notifsOn = false;
+                                selectedTime = null;
+                              });
+                            }
+                          },
+                        ),
+                      ],
                     ),
                     Row(
                       children: [
@@ -583,6 +649,8 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                       'child': selectedChild,
                       'days': selectedDays,
                       'isRecurring': selectedIsRecurring,
+                      'notifsOn': notifsOn,
+                      'time': selectedTime, // ← Add this!
                     });
                   },
                   child: const Text("Confirm"),
@@ -602,53 +670,59 @@ class MyMedicationLookupState extends State<MedicationLookup> {
         appState.items.where((item) => item.isChecked).toList();
 
     return Scaffold(
-      body: SingleChildScrollView(
-        // Added SingleChildScrollView here
-        child: Column(
-          children: [
-            // Search Section
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: searchController,
-                      onChanged: (value) {
-                        setState(() {});
-                      },
-                      decoration: const InputDecoration(
-                        hintText: 'Search medications...',
-                      ),
+      body: Column(
+        children: [
+          // Search Section
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: searchController,
+                    onChanged: (value) {
+                      //This will trigger a rebuild when the text changes
+                      setState(() {
+                        //This will force a rebuild of the FutureBuilder
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      hintText: 'Search medications...',
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.search),
-                    onPressed: () {
-                      setState(() {});
-                    },
-                  ),
-                ],
-              ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: () {
+                    // No need for async here; FutureBuilder handles the async nature
+                    setState(() {});
+                  },
+                ),
+              ],
             ),
-            // FutureBuilder to display search results based on the search query
-            FutureBuilder<List<Medication>>(
-              future:
-                  searchController.text.isEmpty
-                      ? Future.value([])
-                      : _searchMedications(searchController.text),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const CircularProgressIndicator();
-                } else if (snapshot.hasError) {
-                  return Text('Error: ${snapshot.error}');
-                } else {
-                  _searchResults = snapshot.data ?? [];
-                  return _searchResults.isEmpty
-                      ? const SizedBox.shrink()
-                      : ListView.builder(
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
+          ),
+
+          // FutureBuilder to display search results based on the search query
+          FutureBuilder<List<Medication>>(
+            future:
+                searchController.text.isEmpty
+                    ? Future.value([])
+                    : _searchMedications(
+                      searchController.text,
+                    ), //Only call the search function when text is not empty
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const CircularProgressIndicator(); //Show loading indicator
+              } else if (snapshot.hasError) {
+                return Text('Error: ${snapshot.error}'); //Handle errors
+              } else {
+                _searchResults = snapshot.data ?? []; // Update _searchResults
+                final appState = context.watch<MyAppState>();
+                return _searchResults.isEmpty
+                    ? const SizedBox.shrink()
+                    : Expanded(
+                      // Make it expandable
+                      child: ListView.builder(
                         itemCount: _searchResults.length,
                         itemBuilder: (context, index) {
                           final med = _searchResults[index];
@@ -667,10 +741,11 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                               },
                               child: Text(med.genericName),
                             ),
-                            subtitle: Text(med.description),
+                            // subtitle: Text(med.description),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                // Add to Interaction Checker button !
                                 IconButton(
                                   icon: const Icon(
                                     Icons.compare_arrows,
@@ -678,8 +753,12 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                                   ),
                                   tooltip: 'Add to Interaction Checker',
                                   onPressed: () {
+                                    // Create a new Item just for the interaction checker
                                     Item newItem = Item(med, false);
+
+                                    // Add directly to interaction check without adding to medications list
                                     appState.addToInteractionCheck(newItem);
+
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(
@@ -690,6 +769,7 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                                     );
                                   },
                                 ),
+                                // Regular Add button (for adding to medications list)
                                 TextButton(
                                   child: const Text("Add"),
                                   onPressed: () async {
@@ -700,11 +780,39 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                                       Child? child = result['child'];
                                       List<bool> days = result['days'];
                                       bool isRecurring = result['isRecurring'];
+                                      bool notifsOn = result['notifsOn'];
+                                      TimeOfDay? time = result['time'];
 
                                       med.child = child;
                                       med.daysUsed = days;
                                       med.isRecurring = isRecurring;
+                                      med.notifsOn = notifsOn;
 
+                                      if (notifsOn && time != null) {
+                                        med.notification = medNotification(
+                                          brandName: med.brandName,
+                                          genericName: med.genericName,
+                                          message:
+                                              'Time to take ${med.genericName}!',
+                                          dosage: med.dosage,
+                                          child: child,
+                                          isRecurring: isRecurring,
+                                          notifsOn: notifsOn,
+                                          daysUsed: days,
+                                          medication: med,
+                                          time: time,
+                                        );
+
+                                        if (isRecurring) {
+                                          await scheduleRecurringIOSNotification(
+                                            med,
+                                          );
+                                        } else {
+                                          await scheduleMedicationNotification(
+                                            med,
+                                          );
+                                        }
+                                      }
                                       appState.addItem(Item(med, false));
                                     }
                                   },
@@ -713,37 +821,41 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                             ),
                           );
                         },
-                      );
-                }
-              },
+                      ),
+                    );
+              }
+            },
+          ),
+
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(children: [
+              
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(children: []),
-            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await syncFDAData();
+            },
+            child: const Text('Sync FDA Data'),
+          ),
+          if (selectedItems.length == 2)
             ElevatedButton(
-              onPressed: () async {
-                await syncFDAData();
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) => InteractionChecker(
+                          selectedInteraction: selectedItems,
+                        ),
+                  ),
+                );
               },
-              child: const Text('Sync FDA Data'),
+              child: const Text('Interaction Checker'),
             ),
-            if (selectedItems.length == 2)
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => InteractionChecker(
-                            selectedInteraction: selectedItems,
-                          ),
-                    ),
-                  );
-                },
-                child: const Text('Interaction Checker'),
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -850,7 +962,7 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
                 const SizedBox(height: 8),
                 displayItems.isEmpty
                     ? const Text(
-                      'No medications selected. Add medications using the compare button or from your list below.',
+                      'No medications selected. Add medications using the compare button on the search screen or from your list below.',
                     )
                     : Wrap(
                       spacing: 8.0,
@@ -897,7 +1009,7 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
 
                         return ListTile(
                           title: Text(item.medication.genericName),
-                          subtitle: Text(item.medication.description),
+                          //subtitle: Text(item.medication.description),
                           trailing: IconButton(
                             icon: Icon(
                               isSelected
@@ -1023,7 +1135,7 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
       final dosage = (weight / 150) * adultDosage;
       setState(() {
         _result =
-            'The correct dosage for the child is: ${dosage.toStringAsFixed(2)} mg';
+            'The correct dosage for the child is: ${dosage.toStringAsPrecision(3)} mg';
       });
       if (_selectedMedication != null) {
         // Get app state and update the medication
@@ -1194,10 +1306,11 @@ class DosageCalculatorPageState extends State<DosageCalculatorPage> {
   }
 }
 
-// ***************************** MEDICATION DESCRIPTION (clickable via Medication LookUp) *********************************
+// ***************************** MEDICATION INFORMATION (clickable via Medication LookUp and homepage) *********************************
 class MedicationDescriptionPage extends StatefulWidget {
   final Medication medication;
   const MedicationDescriptionPage({super.key, required this.medication});
+
   @override
   MedicationDescriptionState createState() => MedicationDescriptionState();
 }
@@ -1205,6 +1318,7 @@ class MedicationDescriptionPage extends StatefulWidget {
 class MedicationDescriptionState extends State<MedicationDescriptionPage> {
   String _aiGeneratedDescription = '';
   bool _isLoading = false;
+  bool _isEditing = false;
 
   @override
   void initState() {
@@ -1213,9 +1327,35 @@ class MedicationDescriptionState extends State<MedicationDescriptionPage> {
   }
 
   Future<void> _generateDescription() async {
+    if (widget.medication.aiDescription != null &&
+        widget.medication.aiDescription!.isNotEmpty) {
+      setState(() {
+        _aiGeneratedDescription = widget.medication.aiDescription!;
+        _isLoading = false;
+      });
+      return;
+    }
+
+    Future<void> _selectTime(BuildContext context) async {
+      final TimeOfDay? picked = await showTimePicker(
+        context: context,
+        initialEntryMode: TimePickerEntryMode.inputOnly,
+        initialTime: TimeOfDay.now(),
+      );
+      if (picked != null) {
+        setState(() {
+          widget.medication.notification?.time = picked; // FIX
+        });
+      }
+
+      await _selectTime(context);
+      if (widget.medication.notifsOn) {
+        await scheduleMedicationNotification(widget.medication);
+      }
+    }
+
     setState(() {
       _isLoading = true;
-      _aiGeneratedDescription = '';
     });
 
     final apiKey = 'AIzaSyBYOnoU40by4erAfWuRbPezXIVR_pCHQBM';
@@ -1226,10 +1366,14 @@ class MedicationDescriptionState extends State<MedicationDescriptionPage> {
 
     try {
       final response = await model.generateContent([Content.text(prompt)]);
-      final result = response.text ?? 'No description generated.';
-
+      final result =
+          (response.text != null && response.text!.trim().isNotEmpty)
+              ? response.text!
+              : 'No description available for this medication.';
+      //print('Gemini response: ${response.text}'); //debug
       setState(() {
         _aiGeneratedDescription = result;
+        widget.medication.aiDescription = result;
         _isLoading = false;
       });
     } catch (e) {
@@ -1243,38 +1387,265 @@ class MedicationDescriptionState extends State<MedicationDescriptionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Medication Description')),
+      appBar: AppBar(title: const Text('Medication Information')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              widget.medication.genericName,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            // Medication Name
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.medication.genericName,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Description
+                _isLoading
+                    ? const CircularProgressIndicator()
+                    : Text(
+                      _aiGeneratedDescription.isNotEmpty
+                          ? _aiGeneratedDescription
+                          : widget.medication.description,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+
+                const SizedBox(height: 4),
+                // Warning
+                const Text(
+                  'Warning: AI generated descriptions may not be accurate. '
+                  'Use with caution.',
+                  style: TextStyle(fontSize: 12, color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            if (_isLoading)
-              const CircularProgressIndicator()
-            else
-              Text(
-                _aiGeneratedDescription.isNotEmpty
-                    ? _aiGeneratedDescription
-                    : widget
-                        .medication
-                        .description, // Fallback to provided description
-                style: const TextStyle(fontSize: 16),
+
+            Divider(
+              height: 32,
+              thickness: 1,
+              color: const Color.fromARGB(255, 0, 0, 0),
+            ),
+
+            // scrollable section
+            Expanded(
+              child: ListView(
+                children: [
+                  // Child Dropdown
+                  Text(
+                    "Assigned Child",
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  DropdownButton<Child>(
+                    value: widget.medication.child,
+                    hint: const Text("Select a child"),
+                    isExpanded: true,
+                    items:
+                        children.map((child) {
+                          return DropdownMenuItem<Child>(
+                            value: child,
+                            child: Text(child.childName),
+                          );
+                        }).toList(),
+                    onChanged:
+                        _isEditing
+                            ? (Child? newChild) {
+                              setState(() {
+                                widget.medication.child = newChild;
+                              });
+                            }
+                            : null,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Dosage Field
+                  Text(
+                    "Dosage (mg)",
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  TextFormField(
+                    initialValue:
+                        (widget.medication.dosage != null &&
+                                widget.medication.dosage! > 0)
+                            ? widget.medication.dosage!.toString()
+                            : '',
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'Enter dosage',
+                    ),
+                    enabled: _isEditing,
+                    onChanged: (value) {
+                      final parsed = double.tryParse(value);
+                      if (parsed != null) {
+                        widget.medication.dosage = parsed;
+                      }
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Recurring Toggle
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Recurring
+                      Row(
+                        children: [
+                          Text(
+                            "Recurring?  ",
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          Switch(
+                            value: widget.medication.isRecurring,
+                            onChanged:
+                                _isEditing
+                                    ? (value) {
+                                      setState(() {
+                                        widget.medication.isRecurring = value;
+                                      });
+                                    }
+                                    : null,
+                          ),
+                        ],
+                      ),
+
+                      // Notify Me toggle
+                      Row(
+                        children: [
+                          Text(
+                            "Notify Me  ",
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          Switch(
+                            value: widget.medication.notifsOn,
+                            onChanged:
+                                _isEditing
+                                    ? (value) async {
+                                      if (value) {
+                                        final TimeOfDay? picked =
+                                            await showTimePicker(
+                                              context: context,
+                                              initialTime: TimeOfDay.now(),
+                                              initialEntryMode:
+                                                  TimePickerEntryMode.inputOnly,
+                                            );
+
+                                        if (picked != null) {
+                                          setState(() {
+                                            widget.medication.notifsOn = true;
+
+                                            // Ensure a notification object exists
+                                            widget
+                                                .medication
+                                                .notification ??= medNotification(
+                                              genericName:
+                                                  widget.medication.genericName,
+                                              message:
+                                                  'Time to take ${widget.medication.genericName}!', // TODO: EDIT
+                                            );
+
+                                            widget
+                                                .medication
+                                                .notification!
+                                                .time = picked;
+                                          });
+
+                                          if (widget.medication.isRecurring) {
+                                            await scheduleRecurringIOSNotification(
+                                              widget.medication,
+                                            );
+                                          } else {
+                                            await scheduleMedicationNotification(
+                                              widget.medication,
+                                            );
+                                          }
+
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Notification scheduled',
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      } else {
+                                        setState(() {
+                                          widget.medication.notifsOn = false;
+                                        });
+                                        // Optionally cancel existing notification
+                                        await flutterLocalNotificationsPlugin
+                                            .cancel(
+                                              widget.medication.id.hashCode,
+                                            );
+                                        for (int i = 0; i < 7; i++) {
+                                          await flutterLocalNotificationsPlugin
+                                              .cancel(
+                                                widget.medication.id.hashCode +
+                                                    i,
+                                              );
+                                        }
+                                      }
+                                    }
+                                    : null,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Days Selector
+                  Text(
+                    "Days Taken",
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  DaysSelector(
+                    selectedDays: widget.medication.daysUsed,
+                    onChanged:
+                        _isEditing
+                            ? (updatedDays) {
+                              setState(() {
+                                widget.medication.daysUsed = updatedDays;
+                              });
+                            }
+                            : (_) {}, // when not editing
+                  ),
+
+                  const SizedBox(height: 24),
+                ],
               ),
-            const SizedBox(height: 16),
-            const Text(
-              'Warning: AI generated descriptions may not be accurate. '
-              'Use with caution.',
-              style: TextStyle(fontSize: 12, color: Colors.red),
-              textAlign: TextAlign.center,
             ),
-            // Add more details as needed
           ],
         ),
+      ),
+
+      // FAB for Edit / Save Toggle
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          setState(() {
+            _isEditing = !_isEditing;
+          });
+
+          if (!_isEditing) {
+            // confirmation
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Changes saved')));
+          }
+        },
+        child: Icon(_isEditing ? Icons.check : Icons.edit),
+        tooltip: _isEditing ? 'Save Changes' : 'Edit Medication',
       ),
     );
   }

@@ -16,28 +16,51 @@ class DaysSelector extends StatefulWidget {
 
 class _DaysSelectorState extends State<DaysSelector> {
   // Day labels for Monday to Sunday
-  final List<String> dayLabels = const ['Sun','Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  final List<String> dayLabels = const ['S','M', 'T', 'W', 'TH', 'F', 'S'];
 
   @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: ToggleButtons(
-        isSelected: widget.selectedDays,
-        onPressed: (int index) {
-          setState(() {
-            widget.selectedDays[index] = !widget.selectedDays[index];
-          });
-          widget.onChanged(widget.selectedDays);
-        },
-        children: dayLabels
-            .map((day) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Text(day),
-                ))
-            .toList(),
-      ),
-    );
-  }
+Widget build(BuildContext context) {
+  return Center(
+    child: Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      alignment: WrapAlignment.center,
+      children: List.generate(dayLabels.length, (index) {
+        final selected = widget.selectedDays[index];
+        return OutlinedButton(
+          onPressed: () {
+            final newDays = List<bool>.from(widget.selectedDays);
+            newDays[index] = !newDays[index];
+            widget.onChanged(newDays);
+          },
+          style: OutlinedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            backgroundColor: selected
+                ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
+                : Colors.transparent,
+            side: BorderSide(
+              color: selected
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.grey.shade400,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          ),
+          child: Text(
+            dayLabels[index],
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: selected
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.black87,
+            ),
+          ),
+        );
+      }),
+    ),
+  );
+}
+
 
 }

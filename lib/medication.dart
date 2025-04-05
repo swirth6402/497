@@ -1,4 +1,5 @@
 import 'child.dart';
+import 'notification.dart';
 
 class Medication {
   final String? brandName;
@@ -8,14 +9,15 @@ class Medication {
   final String activeIngredient;
   final String dosageAndAdministration;
   final String description;
+  String? aiDescription;
   double? dosage;  
   Child? child; 
   bool isChecked;
   bool isRecurring; 
+  bool notifsOn;
+  medNotification? notification;
   // list representing days that medication is taken, 0 = sun, 1= mon, 2= tues, 3= wed, 4= thurs, 5= fri, 6=sat
   List<bool> daysUsed;
-  
-  // Add other fields as needed
 
   Medication({
     required this.id,
@@ -27,9 +29,12 @@ class Medication {
     required this.dosageAndAdministration,
     this.isChecked = false,
     this.isRecurring = false,
+    this.notifsOn = false,
     required this.description,
     this.child,
+    this.aiDescription,
     List<bool>? daysUsed,
+    medNotification? notification,
   }) : daysUsed = daysUsed ?? List.filled(7, false); 
 
   factory Medication.fromJson(Map<String, dynamic> json) {
