@@ -73,6 +73,8 @@ class MyApp extends StatelessWidget {
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFFB77E), // Light orange
+              foregroundColor: Colors.black, // Text color
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15),
               ),
@@ -707,120 +709,160 @@ class MyMedicationLookupState extends State<MedicationLookup> {
             future:
                 searchController.text.isEmpty
                     ? Future.value([])
-                    : _searchMedications(
-                      searchController.text,
-                    ), //Only call the search function when text is not empty
+                    : _searchMedications(searchController.text),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const CircularProgressIndicator(); //Show loading indicator
+                return const CircularProgressIndicator();
               } else if (snapshot.hasError) {
-                return Text('Error: ${snapshot.error}'); //Handle errors
+                return Text('Error: ${snapshot.error}');
               } else {
-                _searchResults = snapshot.data ?? []; // Update _searchResults
+                _searchResults = snapshot.data ?? [];
                 final appState = context.watch<MyAppState>();
                 return _searchResults.isEmpty
                     ? const SizedBox.shrink()
                     : Expanded(
-                      // Make it expandable
-                      child: ListView.builder(
-                        itemCount: _searchResults.length,
-                        itemBuilder: (context, index) {
-                          final med = _searchResults[index];
-                          return ListTile(
-                            title: GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => MedicationDescriptionPage(
-                                          medication: med,
-                                        ),
-                                  ),
-                                );
-                              },
-                              child: Text(med.genericName),
-                            ),
-                            // subtitle: Text(med.description),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Add to Interaction Checker button !
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.compare_arrows,
-                                    color: Colors.blue,
-                                  ),
-                                  tooltip: 'Add to Interaction Checker',
-                                  onPressed: () {
-                                    // Create a new Item just for the interaction checker
-                                    Item newItem = Item(med, false);
-
-                                    // Add directly to interaction check without adding to medications list
-                                    appState.addToInteractionCheck(newItem);
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          '${med.genericName} added to interaction checker',
-                                        ),
-                                        duration: const Duration(seconds: 2),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                // Regular Add button (for adding to medications list)
-                                TextButton(
-                                  child: const Text("Add"),
-                                  onPressed: () async {
-                                    final result = await _showSelectChildDialog(
-                                      context,
-                                    );
-                                    if (result != null) {
-                                      Child? child = result['child'];
-                                      List<bool> days = result['days'];
-                                      bool isRecurring = result['isRecurring'];
-                                      bool notifsOn = result['notifsOn'];
-                                      TimeOfDay? time = result['time'];
-
-                                      med.child = child;
-                                      med.daysUsed = days;
-                                      med.isRecurring = isRecurring;
-                                      med.notifsOn = notifsOn;
-
-                                      if (notifsOn && time != null) {
-                                        med.notification = medNotification(
-                                          brandName: med.brandName,
-                                          genericName: med.genericName,
-                                          message:
-                                              'Time to take ${med.genericName}!',
-                                          dosage: med.dosage,
-                                          child: child,
-                                          isRecurring: isRecurring,
-                                          notifsOn: notifsOn,
-                                          daysUsed: days,
-                                          medication: med,
-                                          time: time,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: ListView.builder(
+                          itemCount: _searchResults.length,
+                          itemBuilder: (context, index) {
+                            final med = _searchResults[index];
+                            return Card(
+                              color: const Color(0xFFADD8E6),
+                              elevation: 4,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              margin: const EdgeInsets.symmetric(
+                                vertical: 8,
+                                horizontal: 12,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (context) =>
+                                                    MedicationDescriptionPage(
+                                                      medication: med,
+                                                    ),
+                                          ),
                                         );
+                                      },
+                                      child: Text(
+                                        med.genericName,
+                                        style:
+                                            Theme.of(
+                                              context,
+                                            ).textTheme.titleLarge,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.compare_arrows,
+                                          ),
+                                          color: const Color(0xFF0077B6),
+                                          tooltip: 'Add to Interaction Checker',
+                                          onPressed: () {
+                                            Item newItem = Item(med, false);
+                                            appState.addToInteractionCheck(
+                                              newItem,
+                                            );
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  '${med.genericName} added to interaction checker',
+                                                ),
+                                                duration: const Duration(
+                                                  seconds: 2,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                        TextButton(
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.black,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 8,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                          child: const Text("Add"),
+                                          onPressed: () async {
+                                            final result =
+                                                await _showSelectChildDialog(
+                                                  context,
+                                                );
+                                            if (result != null) {
+                                              Child? child = result['child'];
+                                              List<bool> days = result['days'];
+                                              bool isRecurring =
+                                                  result['isRecurring'];
+                                              bool notifsOn =
+                                                  result['notifsOn'];
+                                              TimeOfDay? time = result['time'];
 
-                                        if (isRecurring) {
-                                          await scheduleRecurringIOSNotification(
-                                            med,
-                                          );
-                                        } else {
-                                          await scheduleMedicationNotification(
-                                            med,
-                                          );
-                                        }
-                                      }
-                                      appState.addItem(Item(med, false));
-                                    }
-                                  },
+                                              med.child = child;
+                                              med.daysUsed = days;
+                                              med.isRecurring = isRecurring;
+                                              med.notifsOn = notifsOn;
+
+                                              if (notifsOn && time != null) {
+                                                med.notification = medNotification(
+                                                  brandName: med.brandName,
+                                                  genericName: med.genericName,
+                                                  message:
+                                                      'Time to take ${med.genericName}!',
+                                                  dosage: med.dosage,
+                                                  child: child,
+                                                  isRecurring: isRecurring,
+                                                  notifsOn: notifsOn,
+                                                  daysUsed: days,
+                                                  medication: med,
+                                                  time: time,
+                                                );
+
+                                                if (isRecurring) {
+                                                  await scheduleRecurringIOSNotification(
+                                                    med,
+                                                  );
+                                                } else {
+                                                  await scheduleMedicationNotification(
+                                                    med,
+                                                  );
+                                                }
+                                              }
+                                              appState.addItem(
+                                                Item(med, false),
+                                              );
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          );
-                        },
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     );
               }
