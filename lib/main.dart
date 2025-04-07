@@ -392,25 +392,61 @@ class MyHomePage extends State<HomePage> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              title: GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) =>
-                                              MedicationDescriptionPage(
-                                                medication: item.medication,
-                                              ),
+                             title: Row(
+                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => MedicationDescriptionPage(
+                                            medication: item.medication,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Text(
+                                      item.medication.genericName,
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  );
-                                },
-                                child: Text(
-                                  item.medication.genericName,
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                ),
+                                // const SizedBox(width: 0),
+                                Padding(
+                                padding: const EdgeInsets.only(left: 20), // adjust this value as needed
+                                child: IconButton(
+                                  icon: const Icon(Icons.delete_outline, size: 20),
+                                  tooltip: 'Remove',
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text("Remove Medication"),
+                                        content: const Text("Are you sure you want to remove this medication?"),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context),
+                                            child: const Text("Cancel"),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              appState.removeItem(item);
+                                              Navigator.pop(context);
+                                            },
+                                            child: const Text("Delete"),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
+                              ],
+                            ),
+
                              subtitle: Text(
                               [
                                 if (item.medication.child != null) item.medication.child!.childName,
@@ -465,6 +501,11 @@ class MyAppState extends ChangeNotifier {
     items.add(item);
     notifyListeners();
   }
+  void removeItem(Item item) {
+    items.remove(item);
+    notifyListeners();
+  }
+
 
   // interaction check helper functions
   void addToInteractionCheck(Item item) {
@@ -978,7 +1019,7 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
     final medication1 = selectedItems[0].medication.genericName;
     final medication2 = selectedItems[1].medication.genericName;
     final prompt =
-        'Is it safe to take $medication1 and $medication2 together? Reply yes or no';
+        'Is it safe to take $medication1 and $medication2 together? Reply yes or no, with a two sentence explanation';
     try {
       final response = await model.generateContent([Content.text(prompt)]);
       final result = response.text ?? 'No response from AI.';
@@ -1133,12 +1174,6 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
               ),
               child: Column(
                 children: [
-                  Text(
-                    _interactionResult,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 8),
                   if (_interactionResult.toLowerCase().contains("yes"))
                     Text(
                       "Compatible",
@@ -1157,6 +1192,12 @@ class MyInteractionCheckerState extends State<InteractionChecker> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    Text(
+                    _interactionResult,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
                 ],
               ),
             ),
