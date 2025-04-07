@@ -944,12 +944,13 @@ class MyMedicationLookupState extends State<MedicationLookup> {
               ],
             ),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              await syncFDAData();
-            },
-            child: const Text('Sync FDA Data'),
-          ),
+          // LEAVE THIS HERE COMMENTED OUT PLS
+          // ElevatedButton(
+          //   onPressed: () async {
+          //     await syncFDAData();
+          //   },
+          //   child: const Text('Sync FDA Data'),
+          // ),
           if (selectedItems.length == 2)
             ElevatedButton(
               onPressed: () {
