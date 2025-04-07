@@ -18,6 +18,8 @@ class Medication {
   medNotification? notification;
   // list representing days that medication is taken, 0 = sun, 1= mon, 2= tues, 3= wed, 4= thurs, 5= fri, 6=sat
   List<bool> daysUsed;
+  List<DateTime>? scheduledDates;
+
 
   Medication({
     required this.id,
@@ -34,6 +36,7 @@ class Medication {
     this.child,
     this.aiDescription,
     List<bool>? daysUsed,
+    List<DateTime>? scheduledDates,
     medNotification? notification,
   }) : daysUsed = daysUsed ?? List.filled(7, false); 
 

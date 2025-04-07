@@ -411,13 +411,17 @@ class MyHomePage extends State<HomePage> {
                                       Theme.of(context).textTheme.titleMedium,
                                 ),
                               ),
-                              subtitle: Text(
-                                item.medication.child != null
-                                    ? (item.medication.isRecurring
-                                        ? "${item.medication.child!.childName} • ${item.medication.dosage != null ? '${item.medication.dosage}mg • ' : ''}Recurring on ${recurringDaysText(item.medication.daysUsed)}"
-                                        : "${item.medication.child!.childName}${item.medication.dosage != null ? ' • ${item.medication.dosage}mg' : ''}")
-                                    : "No child assigned",
-                              ),
+                             subtitle: Text(
+                              [
+                                if (item.medication.child != null) item.medication.child!.childName,
+                                if (item.medication.dosage != null) '${item.medication.dosage}mg',
+                                item.medication.isRecurring
+                                  ? 'Recurring on ${recurringDaysText(item.medication.daysUsed)}'
+                                  : 'Not recurring',
+                                if (item.medication.notifsOn && item.medication.notification?.time != null)
+                                  'at ${item.medication.notification!.time!.format(context)}'
+                              ].join(' • '),
+                            ),
                               value: item.isChecked,
                               onChanged: (bool? value) {
                                 appState.toggleChecked(item);
@@ -503,10 +507,17 @@ class Item {
 
   Item(this.medication, this.isChecked);
   bool isScheduledForDate(DateTime date) {
-    // If it is recurring, check if it's scheduled for the day of the week
-    final dayIndex = date.weekday % 7; // Convert to 0-6 range where 0 is Sunday
+  if (medication.isRecurring) {
+     final dayIndex = (date.weekday == 7) ? 0 : date.weekday % 7;
     return medication.daysUsed[dayIndex];
+  } else {
+    return medication.scheduledDates?.any((scheduledDate) =>
+      scheduledDate.year == date.year &&
+      scheduledDate.month == date.month &&
+      scheduledDate.day == date.day
+  ) ?? false;
   }
+}
 }
 
 // helper function for recurring/days/etc
@@ -610,6 +621,7 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                                 setState(() {
                                   notifsOn = true;
                                   selectedTime = picked;
+                                  
                                 });
                               }
                             } else {
@@ -647,12 +659,25 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                 ),
                 TextButton(
                   onPressed: () {
+                        List<DateTime> scheduledDates = [];
+                        if (!selectedIsRecurring) {
+                          for (int i = 0; i < selectedDays.length; i++) {
+                            if (selectedDays[i]) {
+                              // Convert selected day index to actual DateTime
+                              DateTime today = DateTime.now();
+                              int diff = (i - today.weekday % 7 + 7) % 7;
+                              DateTime scheduledDate = today.add(Duration(days: diff));
+                              scheduledDates.add(scheduledDate);
+                            }
+                          }
+                        }
                     Navigator.pop(context, {
                       'child': selectedChild,
                       'days': selectedDays,
                       'isRecurring': selectedIsRecurring,
                       'notifsOn': notifsOn,
-                      'time': selectedTime, // ← Add this!
+                      'time': selectedTime, 
+                      'scheduledDates': scheduledDates,
                     });
                   },
                   child: const Text("Confirm"),
@@ -818,11 +843,13 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                                               bool notifsOn =
                                                   result['notifsOn'];
                                               TimeOfDay? time = result['time'];
+                                              List<DateTime> scheduledDates = result['scheduledDates'] ?? [];
 
                                               med.child = child;
                                               med.daysUsed = days;
                                               med.isRecurring = isRecurring;
                                               med.notifsOn = notifsOn;
+                                              med.scheduledDates = scheduledDates;
 
                                               if (notifsOn && time != null) {
                                                 med.notification = medNotification(
@@ -838,7 +865,7 @@ class MyMedicationLookupState extends State<MedicationLookup> {
                                                   medication: med,
                                                   time: time,
                                                 );
-
+                                               
                                                 if (isRecurring) {
                                                   await scheduleRecurringIOSNotification(
                                                     med,
