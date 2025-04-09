@@ -20,11 +20,19 @@ List<Child> children = [];
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
+  
   await initializeNotifications((NotificationResponse response) {
     debugPrint('Notification tapped with payload: ${response.payload}');
     // add things here
   });
+
+  await flutterLocalNotificationsPlugin
+    .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+    ?.requestPermissions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
 
   runApp(const MyApp());
 }
@@ -450,7 +458,9 @@ class MyHomePage extends State<HomePage> {
                              subtitle: Text(
                               [
                                 if (item.medication.child != null) item.medication.child!.childName,
-                                if (item.medication.dosage != null) '${item.medication.dosage}mg',
+                                item.medication.dosage != null
+                                        ? '${item.medication.dosage!.toStringAsPrecision(3)}mg'
+                                        : null,
                                 item.medication.isRecurring
                                   ? 'Recurring on ${recurringDaysText(item.medication.daysUsed)}'
                                   : 'Not recurring',
